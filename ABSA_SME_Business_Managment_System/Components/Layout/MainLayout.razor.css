@@ -96,3 +96,16 @@ main {
         right: 0.75rem;
         top: 0.5rem;
     }
+.user-header {
+    text-align: center;
+    background-color: #666;
+    color: white;
+    padding: 40px 0;
+}
+
+.profile-pic {
+    border-radius: 50%;
+    width: 100px;
+    height: 100px;
+    margin-bottom: 10px;
+}
