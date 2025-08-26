@@ -1,0 +1,39 @@
+﻿body {
+}
+
+/* footer styling */
+.app-footer {
+    background-color: #7D1701;
+    color: white;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+.app-footer .footer-left,
+.app-footer .footer-center,
+.app-footer .footer-right {
+    flex: 1;
+    min-width: 200px;
+    margin: 5px 10px;
+}
+
+.app-footer h4 {
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #ddd;
+}
+
+.app-footer a {
+    color: #00bfff;
+    margin-right: 12px;
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.app-footer a:hover {
+    text-decoration: underline;
+}
