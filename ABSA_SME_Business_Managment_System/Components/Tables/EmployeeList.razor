@@ -1,0 +1,33 @@
+﻿<h3>EmployeeList</h3>
+
+<table class="table table-hover">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Position</th>
+            <th>Email</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (Employees != null && Employees.Any())
+        {
+            @foreach (var e in Employees)
+            {
+                <tr>
+                    <td>@e.FirstName @e.LastName</td>
+                    <td>@e.Position</td>
+                    <td>@e.Email</td>
+                </tr>
+            }
+        }
+        else
+        {
+            <tr><td colspan="3">No employees found.</td></tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    [Parameter] public IEnumerable<Employee>? Employees { get; set; }
+}
+

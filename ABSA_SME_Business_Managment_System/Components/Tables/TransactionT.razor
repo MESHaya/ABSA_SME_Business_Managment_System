@@ -1,0 +1,37 @@
+﻿@using System.Transactions
+<h3>TransactionT</h3>
+
+@typeparam TItem
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Description</th>
+            <th>Amount</th>
+            <th>Date</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (Transactions != null && Transactions.Any())
+        {
+            @foreach (var t in Transactions)
+            {
+                <tr>
+                    <td>@t.Id</td>
+                    <td>@t.Description</td>
+                    <td>@t.Amount</td>
+                    <td>@t.Date.ToShortDateString()</td>
+                </tr>
+            }
+        }
+        else
+        {
+            <tr><td colspan="4">No transactions found.</td></tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    [Parameter] public IEnumerable<Transaction>? Transactions { get; set; }
+}
