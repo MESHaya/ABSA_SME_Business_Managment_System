@@ -1,14 +1,16 @@
-﻿@inject NavigationManager Navigation
+﻿@namespace ABSA_SME_Business_Managment_System
+@inject NavigationManager Navigation
 
 <div class="top-navbar">
-       <a href="/profile" class="profile-avatar">
-           <img src="https://i.pravatar.cc/150?img=5" alt="Profile" />
-       </a>
+    <a href="/employee/profile" class="profile-avatar">
+        <img src="https://i.pravatar.cc/150?img=5" alt="Profile" />
+    </a>
     <div class="logo">@PageName</div>
     <nav>
         @if (UserRole == "Employee")
         {
-			<a href="/employee/dashboard">Dashboard</a> //change to "/" when working in the employee dashboard
+            <a href="/employee/dashboard">Dashboard</a>
+            //change to "/" when working in the employee dashboard
             <a href="/employee/inventory">Inventory</a>
             <a href="/employee/finances">Finance</a>
             <a href="/settings">Settings</a>
@@ -16,7 +18,8 @@
         else if (UserRole == "Manager")
         {
 
-			<a href="/manager/dashboard">Dashboard</a>	//change to "/" when working in the manager dashboard
+            <a href="/manager/dashboard">Dashboard</a>
+            //change to "/" when working in the manager dashboard
             <a href="/manager/inventory">Inventory</a>
             <a href="/manager/finances">Finances</a>
             <a href="/manager/employee-management">Employees</a>
@@ -27,7 +30,7 @@
 </div>
 
 @code {
-	private string UserRole = "Manager"; //change to "Employee" to test employee view 
+    private string UserRole = "Employee"; //change to "Employee" to test employee view
 
     private string PageName => GetPageName(Navigation.Uri);
 
@@ -38,10 +41,10 @@
 
         var lastSegment = segments[^1];
 
-      
+
         var words = lastSegment.Split('-', StringSplitOptions.RemoveEmptyEntries)
                                .Select(w => char.ToUpper(w[0]) + w[1..]);
         return string.Join(' ', words);
     }
-    
+
 }
