@@ -1,50 +1,16 @@
 ﻿@page "/employee/inventory"
 @using ABSA_SME_Business_Managment_System.Components.Models
-
+@using ABSA_SME_Business_Managment_System.Components.Tables
+<link href="~/app.css" rel="stylesheet" />
 
 <h1>Employee Inventory</h1>
-<h3>StockT</h3>
-
-<table class="table table-bordered">
-    <thead>
-        <tr>
-            <th>Item</th>
-            <th>Quantity</th>
-            <th>Min Level</th>
-            <th>Status</th>
-            <th>Price</th>
-        </tr>
-    </thead>
-    <tbody>
-        @if (StockItems != null && StockItems.Any())
-        {
-            @foreach (var s in StockItems)
-            {
-                <tr>
-                    <td>@s.ItemName</td>
-                    <td>@s.Quantity</td>
-                    <td>@s.StockLevel</td>
-                    <td>@s.Status</td>
-                    <td>@s.Price.ToString("C")</td>
-                </tr>
-            }
-        }
-        else
-        {
-            <tr><td colspan="3">No stock items available.</td></tr>
-        }
-    </tbody>
-</table>
-
-
+<InventoryTable StockItems="StockItems" />
 
 @code {
     public IEnumerable<StockItem> StockItems { get; set; } = new List<StockItem>
-    {
-        new StockItem { ItemName = "Laptop", Quantity = 10,StockLevel = 5, Status = "Critical", Price = 15000 },
-        new StockItem { ItemName = "Keyboard", Quantity = 25,StockLevel = 10, Status = "Low", Price = 500 },
-        new StockItem { ItemName = "Mouse", Quantity = 30,StockLevel = 5, Status = "High", Price = 300 }
+    { 
+        new StockItem { ItemName = "Laptop", Quantity = 10,MinLevel = 5,Status ="Low", Price = 15000 },
+        new StockItem { ItemName = "Keyboard", Quantity = 25,MinLevel = 10,Status ="High", Price = 500 },
+        new StockItem { ItemName = "Mouse", Quantity = 3,MinLevel = 5,Status ="Critical", Price = 300 }
     };
 }
-
-

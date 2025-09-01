@@ -1,0 +1,42 @@
+﻿@using ABSA_SME_Business_Managment_System.Components.Models
+
+<link href="app.css" rel="stylesheet" />
+
+<h3>Inventory</h3>
+<div class="table-wrapper">
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Quantity</th>
+                <th>Min Level</th>
+                <th>Status</th>
+                <th>Price</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (StockItems != null && StockItems.Any())
+            {
+                @foreach (var s in StockItems)
+                {
+                    <tr>
+                        <td>@s.ItemName</td>
+                        <td>@s.Quantity</td>
+                        <td>@s.MinLevel</td>
+                        <td>@s.Status</td>
+                        <td>@s.Price.ToString("C")</td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr><td colspan="3">No stock items available.</td></tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+
+@code {
+    [Parameter] public IEnumerable<StockItem>? StockItems { get; set; } 
+}

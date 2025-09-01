@@ -1,0 +1,46 @@
+﻿@using ABSA_SME_Business_Managment_System.Components.Models
+
+<h3>Invoices</h3>
+
+<div class="table-wrapper">
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Invoice #</th>
+                <th>Date Issued</th>
+                <th>Due Date</th>
+                <th>Customer</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Created By</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Invoice?.Any() == true)
+            {
+                @foreach (var invoice in Invoice)
+                {
+                    <tr>
+                        <td>@invoice.InvoiceNumber</td>
+                        <td>@invoice.DateIssued.ToShortDateString()</td>
+                        <td>@invoice.DueDate.ToShortDateString()</td>
+                        <td>@invoice.CustomerName</td>
+                        <td>@invoice.TotalAmount.ToString("C")</td>
+                        <td>@invoice.Status</td>
+                        <td>@invoice.CreatedBy</td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr><td colspan="7">No invoices available.</td></tr>
+            }
+        </tbody>
+    </table>
+
+</div>
+
+@code {
+    [Parameter] public IEnumerable<Invoice>? Invoice { get; set; }
+
+}

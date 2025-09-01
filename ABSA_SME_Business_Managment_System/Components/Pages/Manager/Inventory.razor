@@ -1,8 +1,22 @@
 ﻿@page "/manager/inventory"
+@using ABSA_SME_Business_Managment_System.Components.Models
+@using ABSA_SME_Business_Managment_System.Components.Tables
 
-<h3>Inventory</h3>
+<h1>Manager Inventory</h1>
+<InventoryTable StockItems="StockItems" />
+<SupplierTable Suppliers ="Suppliers"/>
 
+@code {
+    public IEnumerable<StockItem> StockItems { get; set; } = new List<StockItem>
+    {
+        new StockItem { ItemName = "Laptop", Quantity = 10,MinLevel = 5,Status ="Low", Price = 15000 },
+        new StockItem { ItemName = "Keyboard", Quantity = 25,MinLevel = 10,Status ="High", Price = 500 },
+        new StockItem { ItemName = "Mouse", Quantity = 3,MinLevel = 5,Status ="Critical", Price = 300 }
+    };
 
-@code{
-
+    public IEnumerable<Supplier> Suppliers { get; set; } = new List<Supplier>
+    {
+        new Supplier { SupplierId = 1, Name = "Tech Supplies Ltd", ContactPerson = "Alice Smith", Phone = "0123456789", Email = "alice@techsupplies.com", Address = "123 Tech Street", City = "Johannesburg", Country = "South Africa", PostalCode = "2000", Notes = "Preferred supplier for electronics" },
+        new Supplier { SupplierId = 2, Name = "Office Depot", ContactPerson = "John Doe", Phone = "0987654321", Email = "john@officedepot.com", Address = "456 Office Ave", City = "Cape Town", Country = "South Africa", PostalCode = "8000", Notes = "Office furniture and supplies" }
+    };
 }

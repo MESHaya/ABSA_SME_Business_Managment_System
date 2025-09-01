@@ -1,0 +1,51 @@
+﻿@using ABSA_SME_Business_Managment_System.Components.Models
+
+
+<link href="~/app.css" rel="stylesheet" />
+
+<h3>Suppliers</h3>
+
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Contact Person</th>
+            <th>Phone</th>
+            <th>Email</th>
+            <th>Address</th>
+            <th>City</th>
+            <th>Country</th>
+            <th>Postal Code</th>
+            <th>Notes</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (Suppliers?.Any() == true)
+        {
+            @foreach (var s in Suppliers)
+            {
+                <tr>
+                    <td>@s.SupplierId</td>
+                    <td>@s.Name</td>
+                    <td>@s.ContactPerson</td>
+                    <td>@s.Phone</td>
+                    <td>@s.Email</td>
+                    <td>@s.Address</td>
+                    <td>@s.City</td>
+                    <td>@s.Country</td>
+                    <td>@s.PostalCode</td>
+                    <td>@s.Notes</td>
+                </tr>
+            }
+        }
+        else
+        {
+            <tr><td colspan="10">No suppliers available.</td></tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    [Parameter] public IEnumerable<Supplier>? Suppliers { get; set; }
+}
