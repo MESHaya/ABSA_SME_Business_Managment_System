@@ -1,6 +1,9 @@
 ﻿@inject NavigationManager Navigation
 
 <div class="top-navbar">
+       <a href="/profile" class="profile-avatar">
+           <img src="https://i.pravatar.cc/150?img=5" alt="Profile" />
+       </a>
     <div class="logo">@PageName</div>
     <nav>
         @if (UserRole == "Employee")
@@ -40,4 +43,5 @@
                                .Select(w => char.ToUpper(w[0]) + w[1..]);
         return string.Join(' ', words);
     }
+    
 }
