@@ -1,0 +1,57 @@
+﻿@page "/employee/inventory/stock-request-form"
+@using ABSA_SME_Business_Managment_System.Components.Models
+
+<h3>Stock Request Form</h3>
+
+<div class="card p-3">
+    <EditForm Model="@newRequest" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label>Employee Name:</label>
+            <InputText @bind-Value="newRequest.EmployeeName" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label>Item Name:</label>
+            <InputText @bind-Value="newRequest.ItemName" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label>Quantity:</label>
+            <InputNumber @bind-Value="newRequest.Quantity" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label>Notes (optional):</label>
+            <InputTextArea @bind-Value="newRequest.Notes" class="form-control" />
+        </div>
+
+        <button type="submit" class="btn btn-primary">Submit Request</button>
+    </EditForm>
+</div>
+
+@if (submitted)
+{
+    <div class="alert alert-success mt-3">
+        ✅ Stock request submitted successfully!
+    </div>
+}
+@code {
+    private Models.StockRequest newRequest = new Models.StockRequest();
+    private bool submitted = false;
+
+    private void HandleValidSubmit()
+    {
+        newRequest.RequestDate = DateTime.Now;
+        newRequest.Status = "Pending";
+
+        // TODO: Save to DB/service later
+        submitted = true;
+
+        // Reset form
+        newRequest = new Models.StockRequest();
+    }
+}
+

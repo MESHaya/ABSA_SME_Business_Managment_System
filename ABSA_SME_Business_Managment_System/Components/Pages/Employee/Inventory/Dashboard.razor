@@ -1,14 +1,23 @@
-﻿@page "/employee/inventory"
+﻿@page "/employee/inventory/dashboard"
 @using ABSA_SME_Business_Managment_System.Components.Models
 @using ABSA_SME_Business_Managment_System.Components.Tables
 <link href="~/app.css" rel="stylesheet" />
+
+<div class="mb-3">
+    <NavLink class="btn btn-primary me-2" href="/employee/inventory/stock-request-form">
+        ➕ Submit Stock Request
+    </NavLink>
+    <NavLink class="btn btn-secondary" href="/employee/inventory/stock-requests">
+        📄 View Submitted Requests
+    </NavLink>
+</div>
 
 <h1>Employee Inventory</h1>
 <InventoryTable StockItems="StockItems" />
 
 @code {
     public IEnumerable<StockItem> StockItems { get; set; } = new List<StockItem>
-    { 
+    {
         new StockItem { ItemName = "Laptop", Quantity = 10,MinLevel = 5,Status ="Low", Price = 15000 },
         new StockItem { ItemName = "Keyboard", Quantity = 25,MinLevel = 10,Status ="High", Price = 500 },
         new StockItem { ItemName = "Mouse", Quantity = 3,MinLevel = 5,Status ="Critical", Price = 300 }

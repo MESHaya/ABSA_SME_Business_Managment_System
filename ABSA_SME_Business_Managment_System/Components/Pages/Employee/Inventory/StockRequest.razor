@@ -1,0 +1,66 @@
+﻿@page "/employee/inventory/stock-requests"
+@using ABSA_SME_Business_Managment_System.Components.Models
+@using ABSA_SME_Business_Managment_System.Components.Tables
+
+<h3>Submitted Stock Requests</h3>
+
+<table class="table table-bordered table-striped mt-3">
+    <thead>
+        <tr>
+            <th>Employee</th>
+            <th>Item</th>
+            <th>Quantity</th>
+            <th>Request Date</th>
+            <th>Status</th>
+            <th>Notes</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (EmployeeStockRequests.Any())
+        {
+            @foreach (var request in EmployeeStockRequests)
+            {
+                <tr>
+                    <td>@request.EmployeeName</td>
+                    <td>@request.ItemName</td>
+                    <td>@request.Quantity</td>
+                    <td>@request.RequestDate.ToShortDateString()</td>
+                    <td>@request.Status</td>
+                    <td>@request.Notes</td>
+                </tr>
+            }
+        }
+        else
+        {
+            <tr>
+                <td colspan="6" class="text-center">No stock requests submitted yet.</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    // Temporary in-memory list for now
+    private List<ABSA_SME_Business_Managment_System.Components.Models.StockRequest> EmployeeStockRequests = new()
+{
+    new ABSA_SME_Business_Managment_System.Components.Models.StockRequest
+    {
+        EmployeeName = "Alice",
+        ItemName = "Laptop",
+        Quantity = 2,
+        RequestDate = DateTime.Today.AddDays(-2),
+        Status = "Pending",
+        Notes = "Urgent replacement"
+    },
+    new ABSA_SME_Business_Managment_System.Components.Models.StockRequest
+    {
+        EmployeeName = "Bob",
+        ItemName = "Keyboard",
+        Quantity = 5,
+        RequestDate = DateTime.Today.AddDays(-1),
+        Status = "Approved",
+        Notes = ""
+    },
+};
+
+}

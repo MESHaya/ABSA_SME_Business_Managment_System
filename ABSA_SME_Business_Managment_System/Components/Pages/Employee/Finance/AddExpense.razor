@@ -1,0 +1,56 @@
+﻿@page "/employee/finance/add-expense"
+@using ABSA_SME_Business_Managment_System.Components.Models
+@using Microsoft.AspNetCore.Components.Forms
+
+<PageTitle>Add Expense</PageTitle>
+
+<h2>Add New Expense</h2>
+
+<EditForm Model="@expense" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label class="form-label">Title</label>
+        <InputText class="form-control" @bind-Value="expense.Title" />
+        <ValidationMessage For="@(() => expense.Title)" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Amount</label>
+        <InputNumber class="form-control" @bind-Value="expense.Amount" />
+        <ValidationMessage For="@(() => expense.Amount)" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Date</label>
+        <InputDate class="form-control" @bind-Value="expense.Date" />
+        <ValidationMessage For="@(() => expense.Date)" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Category</label>
+        <InputText class="form-control" @bind-Value="expense.Category" />
+        <ValidationMessage For="@(() => expense.Category)" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Description</label>
+        <InputTextArea class="form-control" @bind-Value="expense.Description" />
+        <ValidationMessage For="@(() => expense.Description)" />
+    </div>
+
+    <button type="submit" class="btn btn-danger">Save</button>
+    <NavLink class="btn btn-secondary ms-2" href="/employee/finance/dashboard">Cancel</NavLink>
+</EditForm>
+
+@code {
+    private Expense expense = new();
+
+    private void HandleValidSubmit()
+    {
+        // Placeholder: Log expense until persistence layer is ready
+        Console.WriteLine($"Expense Added: {expense.Title} - {expense.Amount:C} - {expense.Category}");
+        // TODO: Persist to DB/Service
+    }
+}

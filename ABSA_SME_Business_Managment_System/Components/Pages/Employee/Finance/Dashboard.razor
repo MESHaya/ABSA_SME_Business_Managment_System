@@ -1,24 +1,42 @@
-﻿@page "/employee/finances"
-
+﻿@page "/employee/finance/dashboard"
 @using ABSA_SME_Business_Managment_System.Components.Models
 @using ABSA_SME_Business_Managment_System.Components.Tables
 
+<PageTitle>Finance Dashboard</PageTitle>
 
-<link href="~/app.css" rel="stylesheet" />
+<h1>Finance Dashboard</h1>
 
+<div class="row">
+    <div class="actions">
+        <NavLink class="btn btn-primary m-2" href="/employee/finance/add-income">
+            ➕ Add Income
+        </NavLink>
+
+        <NavLink class="btn btn-danger m-2" href="/employee/finance/add-expense">
+            ➖ Add Expense
+        </NavLink>
+    </div>
+</div>
+
+<hr />
+
+<!-- Inline Dashboard Widgets -->
+<h3>Recent Transactions</h3>
 <TransactionTable Transactions="Transactions" />
-<InvoiceTable Invoice="Invoice" />
+
+<h3 class="mt-4">Recent Invoices</h3>
+<InvoiceTable Invoice="Invoices" />
 
 @code {
     public IEnumerable<Transaction> Transactions { get; set; } = new List<Transaction>
-{
-    new Transaction { TransactionId = 1, Date = DateTime.Now, Description = "Sale of Laptop", TransactionType = "Sale", Amount = 15000, PaymentMethod = "Card", Category = "Sales", CreatedBy = "Employee01", ReferenceNumber = "INV-1001" },
-    new Transaction { TransactionId = 2, Date = DateTime.Now, Description = "Purchase of Keyboards", TransactionType = "Expense", Amount = 5000, PaymentMethod = "Bank Transfer", Category = "Stock Purchase", CreatedBy = "Manager01", ReferenceNumber = "SUP-202" }
-};
-
-    public IEnumerable<Invoice> Invoice { get; set; } = new List<Invoice>
     {
-         new Invoice
+        new Transaction { TransactionId = 1, Date = DateTime.Now, Description = "Sale of Laptop", TransactionType = "Sale", Amount = 15000, PaymentMethod = "Card", Category = "Sales", CreatedBy = "Employee01", ReferenceNumber = "INV-1001" },
+        new Transaction { TransactionId = 2, Date = DateTime.Now, Description = "Purchase of Keyboards", TransactionType = "Expense", Amount = 5000, PaymentMethod = "Bank Transfer", Category = "Stock Purchase", CreatedBy = "Manager01", ReferenceNumber = "SUP-202" }
+    };
+
+    public IEnumerable<Invoice> Invoices { get; set; } = new List<Invoice>
+    {
+        new Invoice
         {
             InvoiceId = 1,
             InvoiceNumber = "INV-1001",
@@ -47,9 +65,5 @@
             Status = "Paid",
             CreatedBy = "Manager01"
         }
-
-
-};
+    };
 }
-}
-

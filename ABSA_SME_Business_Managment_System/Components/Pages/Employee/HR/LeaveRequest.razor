@@ -1,0 +1,62 @@
+﻿@page "/employee/hr/leave-request"
+@using ABSA_SME_Business_Managment_System.Components.Models
+@using Microsoft.AspNetCore.Components.Forms
+
+<h3>Leave Request Form</h3>
+
+<div class="card p-3">
+    <EditForm Model="@leaveRequest" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label>Employee Name</label>
+            <InputText @bind-Value="leaveRequest.EmployeeName" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label>Leave Type</label>
+            <InputText @bind-Value="leaveRequest.LeaveType" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label>Start Date</label>
+            <InputDate @bind-Value="leaveRequest.StartDate" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label>End Date</label>
+            <InputDate @bind-Value="leaveRequest.EndDate" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label>Reason (optional)</label>
+            <InputTextArea @bind-Value="leaveRequest.Reason" class="form-control" />
+        </div>
+
+        <button type="submit" class="btn btn-primary">Submit Leave Request</button>
+    </EditForm>
+</div>
+
+@if (submitted)
+{
+    <div class="alert alert-success mt-3">
+        ✅ Leave request submitted successfully!
+    </div>
+}
+
+@code {
+    private ABSA_SME_Business_Managment_System.Components.Models.LeaveRequest leaveRequest
+      = new ABSA_SME_Business_Managment_System.Components.Models.LeaveRequest();
+
+
+    private bool submitted = false;
+
+    private void HandleValidSubmit()
+    {
+        leaveRequest.Status = "Pending";
+        // TODO: Hook into DB/service later
+        submitted = true;
+        //leaveRequest = new LeaveRequest();
+    }
+}

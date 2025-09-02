@@ -1,0 +1,50 @@
+﻿@page "/employee/hr/payslips"
+@using ABSA_SME_Business_Managment_System.Components.Models
+
+<h3>Payslips</h3>
+
+<p>Below is a list of your payslips. Click “Download” to view each payslip.</p>
+
+<table class="table table-bordered table-striped mt-3">
+    <thead>
+        <tr>
+            <th>Month</th>
+            <th>Year</th>
+            <th>Gross Salary</th>
+            <th>Net Salary</th>
+            <th>Download</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (EmployeePayslips.Any())
+        {
+            @foreach (var slip in EmployeePayslips)
+            {
+                <tr>
+                    <td>@slip.Month</td>
+                    <td>@slip.Year</td>
+                    <td>@slip.GrossSalary.ToString("C")</td>
+                    <td>@slip.NetSalary.ToString("C")</td>
+                    <td>
+                        <a class="btn btn-sm btn-primary" href="@slip.FileUrl" target="_blank">Download</a>
+                    </td>
+                </tr>
+            }
+        }
+        else
+        {
+            <tr>
+                <td colspan="5" class="text-center">No payslips available.</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    // Temporary in-memory payslips list
+    private List<Payslip> EmployeePayslips = new()
+    {
+        new Payslip { Month = "July", Year = 2025, GrossSalary = 20000, NetSalary = 18000, FileUrl = "/files/payslip_july_2025.pdf" },
+        new Payslip { Month = "June", Year = 2025, GrossSalary = 20000, NetSalary = 18000, FileUrl = "/files/payslip_june_2025.pdf" }
+    };
+}

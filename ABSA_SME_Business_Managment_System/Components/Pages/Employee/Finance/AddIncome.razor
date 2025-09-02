@@ -1,0 +1,50 @@
+﻿@page "/employee/finance/add-income"
+@using ABSA_SME_Business_Managment_System.Components.Models
+@using Microsoft.AspNetCore.Components.Forms
+
+<PageTitle>Add Income</PageTitle>
+
+<h2>Add New Income</h2>
+
+<EditForm Model="@income" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label class="form-label">Title</label>
+        <InputText class="form-control" @bind-Value="income.Title" />
+        <ValidationMessage For="@(() => income.Title)" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Amount</label>
+        <InputNumber class="form-control" @bind-Value="income.Amount" />
+        <ValidationMessage For="@(() => income.Amount)" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Date</label>
+        <InputDate class="form-control" @bind-Value="income.Date" />
+        <ValidationMessage For="@(() => income.Date)" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Description</label>
+        <InputTextArea class="form-control" @bind-Value="income.Description" />
+        <ValidationMessage For="@(() => income.Description)" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Save</button>
+    <NavLink class="btn btn-secondary ms-2" href="/employee/finance/dashboard">Cancel</NavLink>
+</EditForm>
+
+@code {
+    private Income income = new();
+
+    private void HandleValidSubmit()
+    {
+        // For now just log/placeholder (later save to DB/Service)
+        Console.WriteLine($"Income Added: {income.Title} - {income.Amount:C}");
+        // TODO: Add persistence (DB/Service layer)
+    }
+}

@@ -2,7 +2,7 @@
 @inject NavigationManager Navigation
 
 <div class="top-navbar">
-    <a href="/employee/profile" class="profile-avatar">
+    <a href="/employee/hr/dashboard" class="profile-avatar">
         <img src="https://i.pravatar.cc/150?img=5" alt="Profile" />
     </a>
     <div class="logo">@PageName</div>
@@ -11,8 +11,8 @@
         {
             <a href="/employee/dashboard">Dashboard</a>
             //change to "/" when working in the employee dashboard
-            <a href="/employee/inventory">Inventory</a>
-            <a href="/employee/finances">Finance</a>
+            <a href="/employee/inventory/dashboard">Inventory</a>
+            <a href="/employee/finance/dashboard">Finance</a>
             <a href="/settings">Settings</a>
         }
         else if (UserRole == "Manager")
@@ -30,7 +30,7 @@
 </div>
 
 @code {
-    private string UserRole = "Manager"; //change to "Employee" to test employee view
+    private string UserRole = "Employee"; //change to "Employee" to test employee view
 
     private string PageName => GetPageName(Navigation.Uri);
 

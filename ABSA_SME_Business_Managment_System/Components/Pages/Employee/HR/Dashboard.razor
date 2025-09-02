@@ -1,7 +1,24 @@
-﻿@page "/employee/profile"
+﻿@page "/employee/hr/dashboard"
+
 @using System.ComponentModel.DataAnnotations
 
 <h3>Employee Profile</h3>
+
+<div class="mb-3">
+    <NavLink class="btn btn-primary me-2" href="/employee/hr/leave-request">
+        ➕ Submit Leave Request
+    </NavLink>
+
+    <NavLink class="btn btn-secondary" href="/employee/hr/payslips">
+        📄 View Payslips
+    </NavLink>
+</div>
+
+<p>Select an action above to manage your HR tasks.</p>
+
+
+
+
 
 <div class="card p-3" style="max-width: 600px;">
     <EditForm Model="@employeeProfile" OnValidSubmit="HandleValidSubmit">
@@ -73,3 +90,4 @@
         public string Department { get; set; } = string.Empty;
     }
 }
+
