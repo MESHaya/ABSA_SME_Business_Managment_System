@@ -1,10 +1,19 @@
-﻿@page "/manager/inventory"
+﻿@page "/manager/inventory/dashboard"
 @using ABSA_SME_Business_Managment_System.Components.Models
 @using ABSA_SME_Business_Managment_System.Components.Tables
 
+
+    <div class="actions">
+    <NavLink class="btn btn-primary m-2" href="/manager/inventory/stock-requests">
+            Stock Request
+        </NavLink>
+
+       
+    </div>
+
 <h1>Manager Inventory</h1>
 <InventoryTable StockItems="StockItems" />
-<SupplierTable Suppliers ="Suppliers"/>
+<SupplierTable Suppliers="Suppliers" />
 
 @code {
     public IEnumerable<StockItem> StockItems { get; set; } = new List<StockItem>

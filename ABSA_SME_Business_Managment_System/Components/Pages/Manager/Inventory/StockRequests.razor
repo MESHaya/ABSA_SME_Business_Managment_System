@@ -1,0 +1,72 @@
+﻿@page "/manager/inventory/stock-requests"
+@using ABSA_SME_Business_Managment_System.Components.Models
+
+<h3>Stock Requests (Manager View)</h3>
+
+<table class="table table-bordered table-striped mt-3">
+    <thead>
+        <tr>
+            <th>Employee</th>
+            <th>Item</th>
+            <th>Quantity</th>
+            <th>Request Date</th>
+            <th>Status</th>
+            <th>Notes</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (ManagerStockRequests.Any())
+        {
+            @foreach (var request in ManagerStockRequests)
+            {
+                <tr>
+                    <td>@request.EmployeeName</td>
+                    <td>@request.ItemName</td>
+                    <td>@request.Quantity</td>
+                    <td>@request.RequestDate.ToShortDateString()</td>
+                    <td>@request.Status</td>
+                    <td>@request.Notes</td>
+                    <td>
+                        @if (request.Status == "Pending")
+                        {
+                            <button class="btn btn-success btn-sm me-1" @onclick="() => ApproveRequest(request)">Approve</button>
+                            <button class="btn btn-danger btn-sm" @onclick="() => DenyRequest(request)">Deny</button>
+                        }
+                        else
+                        {
+                            <span>N/A</span>
+                        }
+                    </td>
+                </tr>
+            }
+        }
+        else
+        {
+            <tr>
+                <td colspan="7" class="text-center">No stock requests submitted yet.</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<StockRequest> ManagerStockRequests = new()
+    {
+        new StockRequest { EmployeeName = "Alice", ItemName = "Laptop", Quantity = 2, RequestDate = DateTime.Today.AddDays(-2), Status = "Pending", Notes = "Urgent replacement" },
+        new StockRequest { EmployeeName = "Bob", ItemName = "Keyboard", Quantity = 5, RequestDate = DateTime.Today.AddDays(-1), Status = "Approved", Notes = "" },
+        new StockRequest { EmployeeName = "Charlie", ItemName = "Mouse", Quantity = 3, RequestDate = DateTime.Today, Status = "Pending", Notes = "New hires" }
+    };
+
+    private void ApproveRequest(StockRequest request)
+    {
+        request.Status = "Approved";
+        StateHasChanged();
+    }
+
+    private void DenyRequest(StockRequest request)
+    {
+        request.Status = "Denied";
+        StateHasChanged();
+    }
+}

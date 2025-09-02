@@ -1,0 +1,54 @@
+﻿@page "/manager/crm/add-interaction-log"
+@using System.ComponentModel.DataAnnotations
+
+<h3>Add Interaction Log</h3>
+
+<div class="card p-3" style="max-width: 600px;">
+    <EditForm Model="@interaction" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label>Customer Name</label>
+            <InputText @bind-Value="interaction.CustomerName" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label>Date of Interaction</label>
+            <InputDate @bind-Value="interaction.Date" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label>Notes</label>
+            <InputTextArea @bind-Value="interaction.Notes" class="form-control" />
+        </div>
+
+        <button type="submit" class="btn btn-primary">Add Log</button>
+    </EditForm>
+
+    @if (submitted)
+    {
+        <div class="alert alert-success mt-3">
+            ✅ Interaction log added successfully!
+        </div>
+    }
+</div>
+
+@code {
+    private InteractionLog interaction = new InteractionLog();
+    private bool submitted = false;
+
+    private void HandleValidSubmit()
+    {
+        submitted = true;
+        interaction = new InteractionLog();
+        // TODO: Save to DB/service later
+    }
+
+    public class InteractionLog
+    {
+        [Required] public string CustomerName { get; set; } = string.Empty;
+        [Required] public DateTime Date { get; set; } = DateTime.Today;
+        [Required] public string Notes { get; set; } = string.Empty;
+    }
+}

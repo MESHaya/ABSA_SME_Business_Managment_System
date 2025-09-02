@@ -1,0 +1,74 @@
+﻿@page "/manager/hr/manage-leave-requests"
+@using ABSA_SME_Business_Managment_System.Components.Models
+
+<h3>Leave Requests (Manager View)</h3>
+
+<p>Approve or deny pending leave requests submitted by employees.</p>
+
+<table class="table table-bordered table-striped mt-3">
+    <thead>
+        <tr>
+            <th>Employee</th>
+            <th>Leave Type</th>
+            <th>Start Date</th>
+            <th>End Date</th>
+            <th>Reason</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (LeaveRequests.Any())
+        {
+            @foreach (var request in LeaveRequests)
+            {
+                <tr>
+                    <td>@request.EmployeeName</td>
+                    <td>@request.LeaveType</td>
+                    <td>@request.StartDate.ToShortDateString()</td>
+                    <td>@request.EndDate.ToShortDateString()</td>
+                    <td>@request.Reason</td>
+                    <td>@request.Status</td>
+                    <td>
+                        @if (request.Status == "Pending")
+                        {
+                            <button class="btn btn-success btn-sm me-1" @onclick="() => ApproveRequest(request)">Approve</button>
+                            <button class="btn btn-danger btn-sm" @onclick="() => DenyRequest(request)">Deny</button>
+                        }
+                        else
+                        {
+                            <span>N/A</span>
+                        }
+                    </td>
+                </tr>
+            }
+        }
+        else
+        {
+            <tr>
+                <td colspan="7" class="text-center">No leave requests submitted yet.</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<LeaveRequest> LeaveRequests = new()
+    {
+        new LeaveRequest { EmployeeName = "Alice", LeaveType = "Annual", StartDate = DateTime.Today.AddDays(2), EndDate = DateTime.Today.AddDays(5), Reason = "Vacation", Status = "Pending" },
+        new LeaveRequest { EmployeeName = "Bob", LeaveType = "Sick", StartDate = DateTime.Today.AddDays(-1), EndDate = DateTime.Today, Reason = "Flu", Status = "Approved" },
+        new LeaveRequest { EmployeeName = "Charlie", LeaveType = "Annual", StartDate = DateTime.Today.AddDays(7), EndDate = DateTime.Today.AddDays(10), Reason = "Family trip", Status = "Pending" }
+    };
+
+    private void ApproveRequest(LeaveRequest request)
+    {
+        request.Status = "Approved";
+        StateHasChanged();
+    }
+
+    private void DenyRequest(LeaveRequest request)
+    {
+        request.Status = "Denied";
+        StateHasChanged();
+    }
+}

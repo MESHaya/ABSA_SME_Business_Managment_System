@@ -1,0 +1,54 @@
+﻿@page "/manager/crm/add-customer"
+@using System.ComponentModel.DataAnnotations
+
+<h3>Add Customer</h3>
+
+<div class="card p-3" style="max-width: 600px;">
+    <EditForm Model="@customer" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label>Name</label>
+            <InputText @bind-Value="customer.Name" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label>Email</label>
+            <InputText @bind-Value="customer.Email" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label>Phone</label>
+            <InputText @bind-Value="customer.Phone" class="form-control" />
+        </div>
+
+        <button type="submit" class="btn btn-primary">Add Customer</button>
+    </EditForm>
+
+    @if (submitted)
+    {
+        <div class="alert alert-success mt-3">
+            ✅ Customer added successfully!
+        </div>
+    }
+</div>
+
+@code {
+    private Customer customer = new Customer();
+    private bool submitted = false;
+
+    private void HandleValidSubmit()
+    {
+        submitted = true;
+        customer = new Customer();
+        // TODO: Save to DB/service later
+    }
+
+    public class Customer
+    {
+        [Required] public string Name { get; set; } = string.Empty;
+        [Required, EmailAddress] public string Email { get; set; } = string.Empty;
+        [Required] public string Phone { get; set; } = string.Empty;
+    }
+}

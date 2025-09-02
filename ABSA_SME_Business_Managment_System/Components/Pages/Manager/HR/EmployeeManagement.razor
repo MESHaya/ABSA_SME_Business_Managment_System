@@ -1,0 +1,52 @@
+﻿@page "/manager/hr/employee-management"
+@using ABSA_SME_Business_Managment_System.Components.Models
+
+<h3>Employee Management</h3>
+
+<p>View and manage employees.</p>
+
+<table class="table table-bordered table-striped mt-3">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Department</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var emp in Employees)
+        {
+            <tr>
+                <td>@emp.FullName</td>
+                <td>@emp.Email</td>
+                <td>@emp.Phone</td>
+                <td>@emp.Department</td>
+                <td>@emp.Status</td>
+                <td>
+                    <button class="btn btn-sm btn-primary me-1">Edit</button>
+                    <button class="btn btn-sm btn-danger">Deactivate</button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    public List<EmployeeProfile> Employees { get; set; } = new()
+    {
+        new EmployeeProfile { FullName="John Doe", Email="john.doe@example.com", Phone="+27 82 123 4567", Department="Finance", Status="Active" },
+        new EmployeeProfile { FullName="Alice Smith", Email="alice.smith@example.com", Phone="+27 82 987 6543", Department="HR", Status="Active" },
+    };
+
+    public class EmployeeProfile
+    {
+        public string FullName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public string Department { get; set; } = string.Empty;
+        public string Status { get; set; } = "Active";
+    }
+}

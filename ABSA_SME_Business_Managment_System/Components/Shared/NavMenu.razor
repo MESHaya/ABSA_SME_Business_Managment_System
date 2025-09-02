@@ -20,9 +20,9 @@
 
             <a href="/manager/dashboard">Dashboard</a>
             //change to "/" when working in the manager dashboard
-            <a href="/manager/inventory">Inventory</a>
-            <a href="/manager/finances">Finances</a>
-            <a href="/manager/employee-management">Employees</a>
+            <a href="/manager/inventory/dashboard">Inventory</a>
+            <a href="/manager/finance/dashboard">Finances</a>
+            <a href="/manager/crm/dashboard">Employees</a>
             <a href="/settings">Settings</a>
         }
     </nav>
@@ -30,7 +30,7 @@
 </div>
 
 @code {
-    private string UserRole = "Employee"; //change to "Employee" to test employee view
+    private string UserRole = "Manager"; //change to "Employee" to test employee view
 
     private string PageName => GetPageName(Navigation.Uri);
 
