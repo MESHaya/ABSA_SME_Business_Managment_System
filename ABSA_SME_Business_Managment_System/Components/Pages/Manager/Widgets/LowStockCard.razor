@@ -1,5 +1,33 @@
-﻿<h3>LowStockCard</h3>
+﻿@* Components/Widgets/LowStockCard.razor *@
+
+<h3>LowStockCard</h3>
+
+<!-- Components/Widgets/LowStockKPI.razor -->
+@code {
+    // Example data 
+    private List<Product> Products = new List<Product>
+    {
+        new Product { Name = "Shirts", Quantity = 15 },
+        new Product { Name = "Jeans", Quantity = 5 },
+        new Product { Name = "Sneakers", Quantity = 3 },
+        new Product { Name = "Jackets", Quantity = 20 }
+    };
+
+    private int LowStockCount => Products.Count(p => p.Quantity < 10);
+}
+
+<div class="card text-white bg-danger mb-3" style="max-width: 18rem;">
+    <div class="card-header">Low Stock</div>
+    <div class="card-body">
+        <h5 class="card-title">@LowStockCount items low in stock</h5>
+        <p class="card-text">Items that need replenishment soon.</p>
+    </div>
+</div>
 
 @code {
-
+    public class Product
+    {
+        public string Name { get; set; }
+        public int Quantity { get; set; }
+    }
 }

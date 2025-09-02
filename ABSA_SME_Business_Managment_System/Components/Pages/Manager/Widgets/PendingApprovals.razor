@@ -1,5 +1,23 @@
-﻿<h3>PendingApprovals</h3>
+﻿@* Components/Widgets/PendingApprovals.razor *@
+
+<h3>PendingApprovals</h3>
+
 
 @code {
+    // Number of pending approvals (dummy for now, replace with real service call)
+    private int PendingApprovalsCount { get; set; }
 
+    protected override void OnInitialized()
+    {
+        // Example: you’ll fetch this from your in-memory list or database later
+        PendingApprovalsCount = 7;
+    }
 }
+
+<div class="card text-white bg-warning mb-3" style="max-width: 18rem;">
+    <div class="card-header">Pending Approvals</div>
+    <div class="card-body">
+        <h5 class="card-title">@PendingApprovalsCount</h5>
+        <p class="card-text">Claims waiting for manager review</p>
+    </div>
+</div>
