@@ -1,0 +1,54 @@
+﻿@using ABSA_SME_Business_Managment_System.Components.Models
+
+
+<link href="~/app.css" rel="stylesheet" />
+
+
+@code {
+    [Parameter] public string Role { get; set; } = "Manager";
+    [Parameter] public string? StatusFilter { get; set; }
+    [Parameter] public DateTime? DateFilter { get; set; }
+
+    private List<Item> items = new()
+    {
+        new Item { Id = 1, Status = "Pending",Description = "Restock the shelves", Date = DateTime.Today, AssignedTo = "Employee1" },
+        new Item { Id = 2, Status = "Approved",Description = "Onboard new employee", Date = DateTime.Today.AddDays(-1), AssignedTo = "Manager1" },
+        new Item { Id = 3, Status = "Pending",Description = "Do stock take", Date = DateTime.Today.AddDays(-2), AssignedTo = "Employee2" }
+    };
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrEmpty(StatusFilter))
+            items = items.Where(i => i.Status == StatusFilter).ToList();
+
+        if (DateFilter.HasValue)
+            items = items.Where(i => i.Date.Date == DateFilter.Value.Date).ToList();
+
+        if (Role == "Employee")
+            items = items.Where(i => i.Status != "Approved").ToList();
+    }
+}
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Status</th>
+            <th>Description</th>
+            <th>Date</th>
+            <th>Assigned To</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in items)
+        {
+            <tr>
+                <td>@item.Id</td>
+                <td>@item.Status</td>
+                <td>@item.Description</td>
+                <td>@item.Date.ToShortDateString()</td>
+                <td>@item.AssignedTo</td>
+            </tr>
+        }
+    </tbody>
+</table>

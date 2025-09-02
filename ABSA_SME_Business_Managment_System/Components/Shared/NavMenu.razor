@@ -18,7 +18,7 @@
         else if (UserRole == "Manager")
         {
 
-            <a href="/manager/dashboard">Dashboard</a>
+            <a href="/">Dashboard</a>
             //change to "/" when working in the manager dashboard
             <a href="/manager/inventory">Inventory</a>
             <a href="/manager/finances">Finances</a>
@@ -30,7 +30,7 @@
 </div>
 
 @code {
-    private string UserRole = "Employee"; //change to "Employee" to test employee view
+    private string UserRole = "Manager"; //change to "Employee" to test employee view
 
     private string PageName => GetPageName(Navigation.Uri);
 

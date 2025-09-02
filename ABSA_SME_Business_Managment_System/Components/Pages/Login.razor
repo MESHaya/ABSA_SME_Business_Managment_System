@@ -1,9 +1,25 @@
-﻿@page "/login" 
-@layout LoginLayout 
+﻿@page "/login"
+@layout LoginLayout
 
-<h1>Login</h1>
-<h3>Remember to change to "/login"</h3>
-<h4>Happy coding</h4>
+@using ABSA_SME_Business_Managment_System.Components.Models
+@inject NavigationManager Navigation
+
+<div class="login-container">
+    <h2>Login</h2>
+    <form>
+        <label for="username">Username</label>
+        <input type="text" id="username" placeholder="Enter username" required>
+
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="Enter password" required>
+
+        <button type="submit">Login</button>
+    </form>
+    <p class="signup-link">Don't have an account? <a href="#">Sign up</a></p>
+</div>
 
 
 
+@code {
+
+}

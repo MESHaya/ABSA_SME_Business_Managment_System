@@ -1,18 +1,19 @@
-﻿@page "/manager/dashboard"
+﻿@page "/"
+@using ABSA_SME_Business_Managment_System.Components.Models
+@using ABSA_SME_Business_Managment_System.Components.Tables
 
 
+<h2>Manager Dashboard</h2>
 
-
-<!-- KPI cards row -->
-<div class="row mb-4">
-    <div class="col-md-4"><KpiCard Title="Total Tasks" Value="50" /></div>
-    <div class="col-md-4"><KpiCard Title="Pending Approvals" Value="12" /></div>
-    <div class="col-md-4"><KpiCard Title="Low Stock Alerts" Value="3" /></div>
+<!-- KPI Cards Row -->
+<div class="grid grid-cols-3 gap-4 mb-6">
+    <KpiCard Title="Total Orders" Value="120" CssClass="bg-primary" />
+    <KpiCard Title="Pending Approvals" Value="8" CssClass="bg-warning" />
+    <KpiCard Title="Low Stock Items" Value="5" CssClass="bg-danger" />
 </div>
 
-<!-- Table section -->
-<h4>📋 Workload</h4>
-<ManagerTable UserRole="Manager" />
+<!-- Workload Table -->
+<WorkloadTable Role="Manager" />
 
 @code {
 
