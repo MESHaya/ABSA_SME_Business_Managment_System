@@ -1,0 +1,13 @@
+﻿@* Components/Widgets/KPIWidget.razor *@
+<div class="kpi-card">
+    <div class="kpi-header">@Title</div>
+    <div class="kpi-value">@Value</div>
+    <div class="kpi-sub">@SubText</div>
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = string.Empty;   // e.g. "Total Claims"
+    [Parameter] public string Value { get; set; } = "0";           // e.g. "45"
+    [Parameter] public string SubText { get; set; } = string.Empty; // e.g. "Updated Today"
+}
+
