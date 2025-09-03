@@ -1,0 +1,8 @@
+<script>
+    function downloadFile(url, fileName) {
+        var link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        link.click();
+    }
+</script>

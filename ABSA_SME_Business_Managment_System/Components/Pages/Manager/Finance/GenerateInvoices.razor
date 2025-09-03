@@ -1,0 +1,175 @@
+@page "/manager/finance/generate-invoices"
+@using ABSA_SME_Business_Managment_System.Components.Models
+@inject IJSRuntime JS
+
+<h3>Generate Invoices</h3>
+
+<p>Below is a list of generated invoices. You can mark them as paid or download a PDF copy.</p>
+
+<table class="table table-bordered table-striped mt-3">
+    <thead>
+        <tr>
+            <th>Invoice Number</th>
+            <th>Customer</th>
+            <th>Date Issued</th>
+            <th>Due Date</th>
+            <th>Status</th>
+            <th>Created By</th>
+            <th>Total</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (Invoices.Any())
+        {
+            @foreach (var invoice in Invoices)
+            {
+                <tr>
+                    <td>@invoice.InvoiceNumber</td>
+                    <td>@invoice.CustomerName</td>
+                    <td>@invoice.DateIssued.ToShortDateString()</td>
+                    <td>@invoice.DueDate.ToShortDateString()</td>
+                    <td>@invoice.Status</td>
+                    <td>@invoice.CreatedBy</td>
+                    <td>@invoice.Items.Sum(i => i.Quantity * i.UnitPrice).ToString("C")</td>
+                    <td>
+                        @if (invoice.Status == "Unpaid")
+                        {
+                            <button class="btn btn-success btn-sm me-1" @onclick="() => MarkAsPaid(invoice)">Mark Paid</button>
+                        }
+                        <button class="btn btn-info btn-sm" @onclick="() => DownloadInvoicePdf(invoice)">Download PDF</button>
+                    </td>
+                </tr>
+            }
+        }
+        else
+        {
+            <tr>
+                <td colspan="8" class="text-center">No invoices available.</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<Invoice> Invoices = new()
+    {
+        new Invoice
+        {
+            InvoiceNumber = "INV-001",
+            CustomerName = "ABC Traders",
+            DateIssued = DateTime.Now.AddDays(-10),
+            DueDate = DateTime.Now.AddDays(20),
+            Status = "Unpaid",
+            CreatedBy = "Manager1",
+            Items = new List<InvoiceItem>
+            {
+                new InvoiceItem { Description = "Product A", Quantity = 2, UnitPrice = 500 },
+                new InvoiceItem { Description = "Product B", Quantity = 1, UnitPrice = 1200 }
+            }
+        },
+        new Invoice
+        {
+            InvoiceNumber = "INV-002",
+            CustomerName = "XYZ Suppliers",
+            DateIssued = DateTime.Now.AddDays(-5),
+            DueDate = DateTime.Now.AddDays(25),
+            Status = "Paid",
+            CreatedBy = "Manager1",
+            Items = new List<InvoiceItem>
+            {
+                new InvoiceItem { Description = "Consulting Service", Quantity = 5, UnitPrice = 800 }
+            }
+        }
+    };
+
+    private void MarkAsPaid(Invoice invoice)
+    {
+        invoice.Status = "Paid";
+    }
+
+    private byte[] GeneratePdfForInvoice(Invoice invoice)
+    {
+        using (var stream = new MemoryStream())
+        {
+            var document = new PdfSharpCore.Pdf.PdfDocument();
+            var page = document.AddPage();
+            var gfx = PdfSharpCore.Drawing.XGraphics.FromPdfPage(page);
+
+            var titleFont = new PdfSharpCore.Drawing.XFont("Arial", 18, PdfSharpCore.Drawing.XFontStyle.Bold);
+            var headerFont = new PdfSharpCore.Drawing.XFont("Arial", 12, PdfSharpCore.Drawing.XFontStyle.Bold);
+            var textFont = new PdfSharpCore.Drawing.XFont("Arial", 12);
+
+            int yPosition = 50;
+            int lineSpacing = 20;
+
+            // Title
+            gfx.DrawString("Invoice", titleFont, PdfSharpCore.Drawing.XBrushes.Black, new PdfSharpCore.Drawing.XPoint(50, yPosition));
+            yPosition += lineSpacing;
+
+            // Header line
+            gfx.DrawLine(new PdfSharpCore.Drawing.XPen(PdfSharpCore.Drawing.XColors.Black, 1), 50, yPosition, page.Width - 50, yPosition);
+            yPosition += lineSpacing;
+
+            // Invoice details
+            gfx.DrawString($"Invoice Number: {invoice.InvoiceNumber}", textFont, PdfSharpCore.Drawing.XBrushes.Black, new PdfSharpCore.Drawing.XPoint(50, yPosition)); yPosition += lineSpacing;
+            gfx.DrawString($"Customer: {invoice.CustomerName}", textFont, PdfSharpCore.Drawing.XBrushes.Black, new PdfSharpCore.Drawing.XPoint(50, yPosition)); yPosition += lineSpacing;
+            gfx.DrawString($"Date Issued: {invoice.DateIssued:d}", textFont, PdfSharpCore.Drawing.XBrushes.Black, new PdfSharpCore.Drawing.XPoint(50, yPosition)); yPosition += lineSpacing;
+            gfx.DrawString($"Due Date: {invoice.DueDate:d}", textFont, PdfSharpCore.Drawing.XBrushes.Black, new PdfSharpCore.Drawing.XPoint(50, yPosition)); yPosition += lineSpacing;
+            gfx.DrawString($"Status: {invoice.Status}", textFont, PdfSharpCore.Drawing.XBrushes.Black, new PdfSharpCore.Drawing.XPoint(50, yPosition)); yPosition += lineSpacing;
+            gfx.DrawString($"Created By: {invoice.CreatedBy}", textFont, PdfSharpCore.Drawing.XBrushes.Black, new PdfSharpCore.Drawing.XPoint(50, yPosition)); yPosition += lineSpacing * 2;
+
+            // Items header
+            gfx.DrawString("Description", headerFont, PdfSharpCore.Drawing.XBrushes.Black, new PdfSharpCore.Drawing.XPoint(50, yPosition));
+            gfx.DrawString("Qty", headerFont, PdfSharpCore.Drawing.XBrushes.Black, new PdfSharpCore.Drawing.XPoint(250, yPosition));
+            gfx.DrawString("Unit Price", headerFont, PdfSharpCore.Drawing.XBrushes.Black, new PdfSharpCore.Drawing.XPoint(320, yPosition));
+            gfx.DrawString("Total", headerFont, PdfSharpCore.Drawing.XBrushes.Black, new PdfSharpCore.Drawing.XPoint(420, yPosition));
+            yPosition += lineSpacing;
+
+            gfx.DrawLine(new PdfSharpCore.Drawing.XPen(PdfSharpCore.Drawing.XColors.Gray, 1), 50, yPosition, page.Width - 50, yPosition);
+            yPosition += lineSpacing;
+
+            // Items
+            foreach (var item in invoice.Items)
+            {
+                gfx.DrawString(item.Description, textFont, PdfSharpCore.Drawing.XBrushes.Black, new PdfSharpCore.Drawing.XPoint(50, yPosition));
+                gfx.DrawString(item.Quantity.ToString(), textFont, PdfSharpCore.Drawing.XBrushes.Black, new PdfSharpCore.Drawing.XPoint(250, yPosition));
+                gfx.DrawString(item.UnitPrice.ToString("C"), textFont, PdfSharpCore.Drawing.XBrushes.Black, new PdfSharpCore.Drawing.XPoint(320, yPosition));
+                gfx.DrawString((item.Quantity * item.UnitPrice).ToString("C"), textFont, PdfSharpCore.Drawing.XBrushes.Black, new PdfSharpCore.Drawing.XPoint(420, yPosition));
+                yPosition += lineSpacing;
+
+                if (yPosition > page.Height - 100)
+                {
+                    page = document.AddPage();
+                    gfx = PdfSharpCore.Drawing.XGraphics.FromPdfPage(page);
+                    yPosition = 50;
+                }
+            }
+
+            // Total
+            yPosition += lineSpacing;
+            gfx.DrawLine(new PdfSharpCore.Drawing.XPen(PdfSharpCore.Drawing.XColors.Black, 1), 50, yPosition, page.Width - 50, yPosition);
+            yPosition += lineSpacing;
+
+            var total = invoice.Items.Sum(i => i.Quantity * i.UnitPrice);
+            gfx.DrawString($"Total Amount: {total:C}", headerFont, PdfSharpCore.Drawing.XBrushes.Black, new PdfSharpCore.Drawing.XPoint(50, yPosition));
+
+            // Footer
+            gfx.DrawString($"Generated on {DateTime.Now:g}", textFont, PdfSharpCore.Drawing.XBrushes.Gray, new PdfSharpCore.Drawing.XPoint(50, page.Height - 50));
+
+            document.Save(stream);
+            return stream.ToArray();
+        }
+    }
+
+    private async Task DownloadInvoicePdf(Invoice invoice)
+    {
+        var pdfBytes = GeneratePdfForInvoice(invoice);
+        var fileName = $"{invoice.InvoiceNumber}.pdf";
+
+        var base64 = Convert.ToBase64String(pdfBytes);
+        var url = $"data:application/pdf;base64,{base64}";
+
+        await JS.InvokeVoidAsync("downloadFile", url, fileName);
+    }
+}
