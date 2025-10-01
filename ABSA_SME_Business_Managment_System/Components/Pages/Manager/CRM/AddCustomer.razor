@@ -1,25 +1,28 @@
 ﻿@page "/manager/crm/add-customer"
-@using System.ComponentModel.DataAnnotations
+@using ABSA_SME_Business_Managment_System.Components.Models
+@inject AppDbContext DbContext
+@using Microsoft.EntityFrameworkCore
 
 <h3>Add Customer</h3>
 
 <div class="card p-3" style="max-width: 600px;">
-    <EditForm Model="@customer" OnValidSubmit="HandleValidSubmit">
+
+    <EditForm Model="@customer" OnValidSubmit="HandleValidSubmit" FormName="AddCustomerForm">
         <DataAnnotationsValidator />
         <ValidationSummary />
 
         <div class="mb-3">
-            <label>Name</label>
+            <label class="form-label">Name</label>
             <InputText @bind-Value="customer.Name" class="form-control" />
         </div>
 
         <div class="mb-3">
-            <label>Email</label>
+            <label class="form-label">Email</label>
             <InputText @bind-Value="customer.Email" class="form-control" />
         </div>
 
         <div class="mb-3">
-            <label>Phone</label>
+            <label class="form-label">Phone</label>
             <InputText @bind-Value="customer.Phone" class="form-control" />
         </div>
 
@@ -32,23 +35,36 @@
             ✅ Customer added successfully!
         </div>
     }
+
+    <!-- Debug information directly on the page -->
+    <hr />
+    <h5>DEBUG INFO</h5>
+    <p>Name: @customer.Name</p>
+    <p>Email: @customer.Email</p>
+    <p>Phone: @customer.Phone</p>
+
 </div>
 
 @code {
-    private Customer customer = new Customer();
+    private Customer customer = new Customer();  // Initialized before the form renders
     private bool submitted = false;
 
-    private void HandleValidSubmit()
+    private async Task HandleValidSubmit()
     {
-        submitted = true;
-        customer = new Customer();
-        // TODO: Save to DB/service later
-    }
+        // Debug output will also appear here in console (optional)
+        Console.WriteLine($"DEBUG: Name={customer.Name}, Email={customer.Email}, Phone={customer.Phone}");
 
-    public class Customer
-    {
-        [Required] public string Name { get; set; } = string.Empty;
-        [Required, EmailAddress] public string Email { get; set; } = string.Empty;
-        [Required] public string Phone { get; set; } = string.Empty;
+        try
+        {
+            DbContext.Customers.Add(customer);
+            await DbContext.SaveChangesAsync();
+
+            submitted = true;
+            customer = new Customer(); // reset form
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
     }
 }

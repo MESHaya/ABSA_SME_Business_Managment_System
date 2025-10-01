@@ -1,0 +1,54 @@
+﻿@using ABSA_SME_Business_Managment_System.Components.Models
+@inject AppDbContext DbContext
+@using Microsoft.EntityFrameworkCore
+
+@if (customers == null)
+{
+    <p><em>Loading...</em></p>
+}
+else if (!customers.Any())
+{
+    <p>No customers found.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Customer ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var c in customers)
+            {
+                <tr>
+                    <td>@c.CustomerId</td>
+                    <td>@c.Name</td>
+                    <td>@c.Email</td>
+                    <td>@c.Phone</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Customer> customers = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCustomersAsync();
+    }
+
+    // Public method to reload customers
+    public async Task LoadCustomersAsync()
+    {
+        customers = await DbContext.Customers
+                                   .OrderBy(c => c.CustomerId)
+                                   .ToListAsync();
+        StateHasChanged();
+    }
+}

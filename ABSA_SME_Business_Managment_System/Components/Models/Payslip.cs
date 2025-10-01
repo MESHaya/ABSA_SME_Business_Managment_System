@@ -2,10 +2,11 @@
 {
     public class Payslip
     {
+        public int PayslipId { get; set; } // Primary Key
         public string Month { get; set; } = string.Empty;
         public int Year { get; set; }
         public decimal GrossSalary { get; set; }
         public decimal NetSalary { get; set; }
-        public string FileUrl { get; set; } = string.Empty; // Path to PDF or download file
+        public string FileUrl { get; set; } = string.Empty;
     }
 }
