@@ -1,0 +1,113 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\USER-PC\\source\\repos\\TestAbsa\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{B8C4392C-A5B7-4CC2-ABE6-D3B6DCCAB97C}|TestAbsa\\TestAbsa\\TestAbsa.csproj|c:\\users\\user-pc\\source\\repos\\testabsa\\testabsa\\testabsa\\components\\pages\\inventory\\addproduct.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{B8C4392C-A5B7-4CC2-ABE6-D3B6DCCAB97C}|TestAbsa\\TestAbsa\\TestAbsa.csproj|solutionrelative:testabsa\\testabsa\\components\\pages\\inventory\\addproduct.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B8C4392C-A5B7-4CC2-ABE6-D3B6DCCAB97C}|TestAbsa\\TestAbsa\\TestAbsa.csproj|c:\\users\\user-pc\\source\\repos\\testabsa\\testabsa\\testabsa\\data\\models\\inventorymodels.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B8C4392C-A5B7-4CC2-ABE6-D3B6DCCAB97C}|TestAbsa\\TestAbsa\\TestAbsa.csproj|solutionrelative:testabsa\\testabsa\\data\\models\\inventorymodels.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B8C4392C-A5B7-4CC2-ABE6-D3B6DCCAB97C}|TestAbsa\\TestAbsa\\TestAbsa.csproj|c:\\users\\user-pc\\source\\repos\\testabsa\\testabsa\\testabsa\\components\\pages\\inventory\\inventorydashboard.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{B8C4392C-A5B7-4CC2-ABE6-D3B6DCCAB97C}|TestAbsa\\TestAbsa\\TestAbsa.csproj|solutionrelative:testabsa\\testabsa\\components\\pages\\inventory\\inventorydashboard.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B8C4392C-A5B7-4CC2-ABE6-D3B6DCCAB97C}|TestAbsa\\TestAbsa\\TestAbsa.csproj|c:\\users\\user-pc\\source\\repos\\testabsa\\testabsa\\testabsa\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B8C4392C-A5B7-4CC2-ABE6-D3B6DCCAB97C}|TestAbsa\\TestAbsa\\TestAbsa.csproj|solutionrelative:testabsa\\testabsa\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B8C4392C-A5B7-4CC2-ABE6-D3B6DCCAB97C}|TestAbsa\\TestAbsa\\TestAbsa.csproj|c:\\users\\user-pc\\source\\repos\\testabsa\\testabsa\\testabsa\\data\\applicationdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B8C4392C-A5B7-4CC2-ABE6-D3B6DCCAB97C}|TestAbsa\\TestAbsa\\TestAbsa.csproj|solutionrelative:testabsa\\testabsa\\data\\applicationdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 5,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{eefa5220-e298-11d0-8f78-00a0c9110057}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:128:0:{116d2292-e37d-41cd-a077-ebacac4c8cc4}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "InventoryDashboard.razor",
+              "DocumentMoniker": "C:\\Users\\USER-PC\\source\\repos\\TestAbsa\\TestAbsa\\TestAbsa\\Components\\Pages\\Inventory\\InventoryDashboard.razor",
+              "RelativeDocumentMoniker": "TestAbsa\\TestAbsa\\Components\\Pages\\Inventory\\InventoryDashboard.razor",
+              "ToolTip": "C:\\Users\\USER-PC\\source\\repos\\TestAbsa\\TestAbsa\\TestAbsa\\Components\\Pages\\Inventory\\InventoryDashboard.razor",
+              "RelativeToolTip": "TestAbsa\\TestAbsa\\Components\\Pages\\Inventory\\InventoryDashboard.razor",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2025-10-20T09:43:48.859Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "ApplicationDbContext.cs",
+              "DocumentMoniker": "C:\\Users\\USER-PC\\source\\repos\\TestAbsa\\TestAbsa\\TestAbsa\\Data\\ApplicationDbContext.cs",
+              "RelativeDocumentMoniker": "TestAbsa\\TestAbsa\\Data\\ApplicationDbContext.cs",
+              "ToolTip": "C:\\Users\\USER-PC\\source\\repos\\TestAbsa\\TestAbsa\\TestAbsa\\Data\\ApplicationDbContext.cs",
+              "RelativeToolTip": "TestAbsa\\TestAbsa\\Data\\ApplicationDbContext.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-20T09:38:54.192Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "InventoryModels.cs",
+              "DocumentMoniker": "C:\\Users\\USER-PC\\source\\repos\\TestAbsa\\TestAbsa\\TestAbsa\\Data\\Models\\InventoryModels.cs",
+              "RelativeDocumentMoniker": "TestAbsa\\TestAbsa\\Data\\Models\\InventoryModels.cs",
+              "ToolTip": "C:\\Users\\USER-PC\\source\\repos\\TestAbsa\\TestAbsa\\TestAbsa\\Data\\Models\\InventoryModels.cs",
+              "RelativeToolTip": "TestAbsa\\TestAbsa\\Data\\Models\\InventoryModels.cs",
+              "ViewState": "AgIAAEgAAAAAAAAAAAAEwFcAAAAyAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-20T09:38:22.256Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "AddProduct.razor",
+              "DocumentMoniker": "C:\\Users\\USER-PC\\source\\repos\\TestAbsa\\TestAbsa\\TestAbsa\\Components\\Pages\\Inventory\\AddProduct.razor",
+              "RelativeDocumentMoniker": "TestAbsa\\TestAbsa\\Components\\Pages\\Inventory\\AddProduct.razor",
+              "ToolTip": "C:\\Users\\USER-PC\\source\\repos\\TestAbsa\\TestAbsa\\TestAbsa\\Components\\Pages\\Inventory\\AddProduct.razor",
+              "RelativeToolTip": "TestAbsa\\TestAbsa\\Components\\Pages\\Inventory\\AddProduct.razor",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAUAAAA8AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2025-10-20T09:38:13.512Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Users\\USER-PC\\source\\repos\\TestAbsa\\TestAbsa\\TestAbsa\\Program.cs",
+              "RelativeDocumentMoniker": "TestAbsa\\TestAbsa\\Program.cs",
+              "ToolTip": "C:\\Users\\USER-PC\\source\\repos\\TestAbsa\\TestAbsa\\TestAbsa\\Program.cs",
+              "RelativeToolTip": "TestAbsa\\TestAbsa\\Program.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAADQAAAAgAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-20T09:32:44.931Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
