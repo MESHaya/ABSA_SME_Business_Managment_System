@@ -1,0 +1,75 @@
+﻿@page "/employee/profile"
+@using System.ComponentModel.DataAnnotations
+
+<h3>Employee Profile</h3>
+
+<div class="card p-3" style="max-width: 600px;">
+    <EditForm Model="@employeeProfile" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label>Full Name</label>
+            <InputText @bind-Value="employeeProfile.FullName" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label>Email</label>
+            <InputText @bind-Value="employeeProfile.Email" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label>Phone</label>
+            <InputText @bind-Value="employeeProfile.Phone" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label>Department</label>
+            <InputText @bind-Value="employeeProfile.Department" class="form-control" />
+        </div>
+
+        <button type="submit" class="btn btn-primary">Update Profile</button>
+    </EditForm>
+
+    @if (submitted)
+    {
+        <div class="alert alert-success mt-3">
+            ✅ Profile updated successfully!
+        </div>
+    }
+</div>
+
+@code {
+    private EmployeeProfile employeeProfile = new EmployeeProfile
+    {
+        FullName = "John Doe",
+        Email = "john.doe@example.com",
+        Phone = "+27 82 123 4567",
+        Department = "Finance"
+    };
+
+    private bool submitted = false;
+
+    private void HandleValidSubmit()
+    {
+        // TODO: Save updates to DB/service later
+        submitted = true;
+    }
+
+    public class EmployeeProfile
+    {
+        [Required(ErrorMessage = "Full Name is required")]
+        public string FullName { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Email is required")]
+        [EmailAddress(ErrorMessage = "Invalid email address")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Phone is required")]
+        [Phone(ErrorMessage = "Invalid phone number")]
+        public string Phone { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Department is required")]
+        public string Department { get; set; } = string.Empty;
+    }
+}

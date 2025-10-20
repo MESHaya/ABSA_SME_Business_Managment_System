@@ -5,14 +5,14 @@ using TestAbsa.Client.Pages;
 using TestAbsa.Components;
 using TestAbsa.Components.Account;
 using TestAbsa.Services;
-using TestAbsa.Data; //  Contains TestAbsa.Data.ApplicationUser
+using TestAbsa.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
-  .AddInteractiveServerComponents()
-  .AddInteractiveWebAssemblyComponents();
+    .AddInteractiveServerComponents()
+    .AddInteractiveWebAssemblyComponents();
 
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityUserAccessor>();
@@ -25,26 +25,64 @@ builder.Services.AddScoped<TestAbsa.Services.IInventoryService, TestAbsa.Service
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultScheme = IdentityConstants.ApplicationScheme;
-    // FIX #1: This needs to be ApplicationScheme for local user login
-    options.DefaultSignInScheme = IdentityConstants.ApplicationScheme;
+    options.DefaultSignInScheme = IdentityConstants.ApplicationScheme;
 })
-  .AddIdentityCookies();
+    .AddIdentityCookies();
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+
+// Register BOTH DbContext and DbContextFactory with proper lifetime
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-  options.UseSqlServer(connectionString));
+    options.UseSqlServer(connectionString), ServiceLifetime.Scoped);
+
+builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
+    options.UseSqlServer(connectionString), ServiceLifetime.Scoped);
+
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-// FIX: Fully qualify ApplicationUser as TestAbsa.Data.ApplicationUser to resolve the ambiguity.
-builder.Services.AddIdentityCore<TestAbsa.Data.ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = false)
-  .AddEntityFrameworkStores<ApplicationDbContext>()
-  .AddSignInManager()
-  .AddDefaultTokenProviders();
+// Configure Identity with ROLES support
+builder.Services.AddIdentityCore<ApplicationUser>(options =>
+{
+    options.SignIn.RequireConfirmedAccount = false;
 
-// FIX: Fully qualify ApplicationUser here too to match the identity setup type.
-builder.Services.AddSingleton<IEmailSender<TestAbsa.Data.ApplicationUser>, IdentityNoOpEmailSender>();
+    // Password requirements
+    options.Password.RequireDigit = true;
+    options.Password.RequireLowercase = true;
+    options.Password.RequireUppercase = true;
+    options.Password.RequireNonAlphanumeric = true;
+    options.Password.RequiredLength = 6;
+})
+    .AddRoles<IdentityRole>()
+    .AddEntityFrameworkStores<ApplicationDbContext>()
+    .AddSignInManager<CustomSignInManager>()
+    .AddDefaultTokenProviders();
+
+builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+
+// Add authorization policies
+builder.Services.AddAuthorizationCore(options =>
+{
+    options.AddPolicy("RequireManagerRole", policy => policy.RequireRole("Manager"));
+    options.AddPolicy("RequireEmployeeRole", policy => policy.RequireRole("Employee"));
+});
 
 var app = builder.Build();
+
+// Seed the database with roles and initial manager
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        await DbInitializer.SeedRolesAndAdminAsync(services);
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred while seeding the database.");
+    }
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -59,14 +97,13 @@ else
 }
 
 app.UseHttpsRedirection();
-
 app.UseStaticFiles();
 app.UseAntiforgery();
 
 app.MapRazorComponents<App>()
-  .AddInteractiveServerRenderMode()
-  .AddInteractiveWebAssemblyRenderMode()
-  .AddAdditionalAssemblies(typeof(TestAbsa.Client._Imports).Assembly);
+    .AddInteractiveServerRenderMode()
+    .AddInteractiveWebAssemblyRenderMode()
+    .AddAdditionalAssemblies(typeof(TestAbsa.Client._Imports).Assembly);
 
 // Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();

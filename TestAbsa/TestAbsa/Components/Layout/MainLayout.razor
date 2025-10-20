@@ -1,23 +1,39 @@
 ﻿@inherits LayoutComponentBase
+@inject NavigationManager Navigation
 
-<div class="page">
-    <div class="sidebar">
+<link href="app.css" rel="stylesheet" />
+
+<div class="layout-container">
+    <!-- Top Navbar -->
+    <div class="top-navbar">
         <NavMenu />
     </div>
-
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div>
-
+    
+    <!-- Header -->
+    <div class="header">
+        <Header />
+    </div>
+    
+    <!-- Page content -->
+    <main class="page-content">
         <article class="content px-4">
             @Body
         </article>
     </main>
+    
+    <!-- Footer -->
+    <div class="app-footer">
+        <Footer AppVersion="1.0.0" />
+    </div>
 </div>
 
+<!-- Blazor Error UI -->
 <div id="blazor-error-ui">
     An unhandled error has occurred.
     <a href="" class="reload">Reload</a>
     <a class="dismiss">🗙</a>
 </div>
+
+@code {
+    
+}

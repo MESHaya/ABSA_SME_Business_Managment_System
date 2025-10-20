@@ -1,0 +1,44 @@
+﻿@page "/manager/dashboard"
+@using TestAbsa
+
+
+<h2>Manager Dashboard</h2>
+
+<!-- Quick Actions -->
+<div>
+    <h5>Quick Actions</h5>
+    <div class="row g-3 mt-2">
+        <div class="col-md-3 col-6">
+            <button class="btn btn-outline-primary w-100 h-100 p-3">
+                ➕ <br />
+                Record Transaction
+            </button>
+        </div>
+        <div class="col-md-3 col-6">
+            <button class="btn btn-outline-secondary w-100 h-100 p-3">Action 2</button>
+        </div>
+        <div class="col-md-3 col-6">
+            <button class="btn btn-outline-secondary w-100 h-100 p-3">Action 3</button>
+        </div>
+        <div class="col-md-3 col-6">
+            <a href="/Manager/PendingUsers" class="btn btn-warning d-flex align-items-center shadow-sm">
+                <i class="oi oi-clipboard me-2"></i>
+                <span>Manage Users</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- KPI Cards Row -->
+<div class="grid grid-cols-3 gap-4 mb-6">
+    <KpiCard Title="Total Orders" Value="120" CssClass="bg-primary" />
+    <KpiCard Title="Pending Approvals" Value="8" CssClass="bg-warning" />
+    <KpiCard Title="Low Stock Items" Value="5" CssClass="bg-danger" />
+</div>
+
+<!-- Workload Table -->
+<WorkloadTable Role="Manager" />
+
+@code {
+
+}

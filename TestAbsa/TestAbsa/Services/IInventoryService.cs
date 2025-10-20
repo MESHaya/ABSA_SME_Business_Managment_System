@@ -21,6 +21,7 @@ namespace TestAbsa.Services
         Task AddStockRequestAsync(StockRequest request);
         Task<List<StockRequest>> GetPendingStockRequestsAsync();
         // Updated signature to match the business logic
+        Task<List<StockRequest>> GetAllStockRequestsAsync(); 
         Task<bool> ReviewStockRequestAsync(int requestId, string status, string managerId, string managerName);
     }
 }

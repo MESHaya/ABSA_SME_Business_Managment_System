@@ -1,0 +1,199 @@
+﻿@page "/Manager/PendingUsers"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using TestAbsa.Data
+@attribute [Authorize(Roles = "Manager")]
+@rendermode InteractiveServer
+
+@inject UserManager<ApplicationUser> UserManager
+@inject ApplicationDbContext DbContext
+@inject ILogger<PendingUsers> Logger
+
+<PageTitle>Pending User Approvals</PageTitle>
+
+<h1>Pending User Registrations</h1>
+
+@if (!string.IsNullOrEmpty(statusMessage))
+{
+    <div class="alert @(statusMessage.StartsWith("Error") ? "alert-danger" : "alert-success") alert-dismissible fade show" role="alert">
+        @statusMessage
+        <button type="button" class="btn-close" @onclick="() => statusMessage = null"></button>
+    </div>
+}
+
+@if (isLoading)
+{
+    <p><em>Loading...</em></p>
+}
+else if (pendingUsers == null || !pendingUsers.Any())
+{
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> No pending user registrations at this time.
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Registration Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var user in pendingUsers)
+                {
+                    <tr>
+                        <td>@user.Email</td>
+                        <td>
+                            <span class="badge bg-secondary">@user.UserRole</span>
+                        </td>
+                        <td>@user.RegistrationDate.ToString("yyyy-MM-dd HH:mm")</td>
+                        <td>
+                            <button class="btn btn-success btn-sm"
+                                    @onclick="() => ApproveUser(user.Id)"
+                                    disabled="@isProcessing">
+                                <i class="bi bi-check-circle"></i> Approve
+                            </button>
+                            <button class="btn btn-danger btn-sm ms-2"
+                                    @onclick="() => RejectUser(user.Id)"
+                                    disabled="@isProcessing">
+                                <i class="bi bi-x-circle"></i> Reject
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<ApplicationUser>? pendingUsers;
+    private string? statusMessage;
+    private bool isLoading = true;
+    private bool isProcessing = false;
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthState { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPendingUsers();
+        isLoading = false;
+    }
+
+    private async Task LoadPendingUsers()
+    {
+        try
+        {
+            pendingUsers = await DbContext.Users
+                .Where(u => !u.IsApproved && u.UserRole == "Employee")
+                .OrderBy(u => u.RegistrationDate)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading pending users");
+            statusMessage = $"Error loading users: {ex.Message}";
+        }
+    }
+
+    private async Task ApproveUser(string userId)
+    {
+        if (isProcessing) return;
+
+        isProcessing = true;
+        statusMessage = null;
+
+        try
+        {
+            var user = await UserManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                statusMessage = "Error: User not found.";
+                return;
+            }
+
+            var authState = await AuthState!;
+            var currentUser = await UserManager.GetUserAsync(authState.User);
+
+            user.IsApproved = true;
+            user.ApprovedByManagerId = currentUser?.Id;
+            user.ApprovedDate = DateTime.UtcNow;
+
+            var result = await UserManager.UpdateAsync(user);
+
+            if (result.Succeeded)
+            {
+                statusMessage = $"Successfully approved {user.Email}";
+                Logger.LogInformation("Manager {ManagerId} approved user {UserId}", currentUser?.Id, userId);
+
+                // TODO: Send approval email to user
+                // await EmailSender.SendApprovalEmailAsync(user);
+
+                await LoadPendingUsers();
+            }
+            else
+            {
+                statusMessage = $"Error: {string.Join(", ", result.Errors.Select(e => e.Description))}";
+            }
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Error: {ex.Message}";
+            Logger.LogError(ex, "Error approving user {UserId}", userId);
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private async Task RejectUser(string userId)
+    {
+        if (isProcessing) return;
+
+        isProcessing = true;
+        statusMessage = null;
+
+        try
+        {
+            var user = await UserManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                statusMessage = "Error: User not found.";
+                return;
+            }
+
+            var result = await UserManager.DeleteAsync(user);
+
+            if (result.Succeeded)
+            {
+                statusMessage = $"Rejected and removed {user.Email}";
+                Logger.LogInformation("Manager rejected and deleted user {UserId}", userId);
+
+                // TODO: Send rejection email to user
+
+                await LoadPendingUsers();
+            }
+            else
+            {
+                statusMessage = $"Error: {string.Join(", ", result.Errors.Select(e => e.Description))}";
+            }
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Error: {ex.Message}";
+            Logger.LogError(ex, "Error rejecting user {UserId}", userId);
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+}

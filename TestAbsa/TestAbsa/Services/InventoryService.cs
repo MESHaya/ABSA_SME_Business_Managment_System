@@ -28,15 +28,39 @@ namespace TestAbsa.Services
                 query = query.Include(p => p.Supplier);
             }
 
-            return await query.ToListAsync();
+            var products = await query.ToListAsync();
+
+            // 🧠 Debugging info
+            Console.WriteLine($"[InventoryService] Loaded {products.Count} products from the database.");
+
+            foreach (var product in products)
+            {
+                Console.WriteLine($"  → ID: {product.Id}, Name: {product.ItemName}, SKU: {product.SKU}, Supplier: {product?.Supplier?.Name ?? "No Supplier"}");
+            }
+
+            return products;
         }
+
 
         public async Task<Product?> GetProductByIdAsync(int id)
         {
-            return await _context.Products
+            var product = await _context.Products
                 .Include(p => p.Supplier)
                 .FirstOrDefaultAsync(p => p.Id == id);
+
+            // 🧠 Debugging info
+            if (product == null)
+            {
+                Console.WriteLine($"[InventoryService] No product found with ID: {id}");
+            }
+            else
+            {
+                Console.WriteLine($"[InventoryService] Found Product — ID: {product.Id}, Name: {product.ItemName}, SKU: {product.SKU}, Supplier: {product?.Supplier?.Name ?? "No Supplier"}");
+            }
+
+            return product;
         }
+
 
         public async Task AddProductAsync(Product product)
         {
@@ -65,13 +89,21 @@ namespace TestAbsa.Services
 
         // --- Stock Request Management ---
 
+
         public async Task AddStockRequestAsync(StockRequest request)
         {
-            request.RequestDate = DateTime.UtcNow;
-            request.Status = "Pending";
+            try
+            {
+                request.RequestDate = DateTime.UtcNow;
+                request.Status = "Pending";
 
-            _context.StockRequests.Add(request);
-            await _context.SaveChangesAsync();
+                _context.StockRequests.Add(request);
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error saving StockRequest: {ex.InnerException?.Message ?? ex.Message}");
+            }
         }
 
         public async Task<List<StockRequest>> GetPendingStockRequestsAsync()
@@ -82,6 +114,15 @@ namespace TestAbsa.Services
                 .OrderBy(r => r.RequestDate)
                 .ToListAsync();
         }
+
+        public async Task<List<StockRequest>> GetAllStockRequestsAsync()
+        {
+            return await _context.StockRequests
+                .Include(r => r.Product) // include related product info
+                .OrderByDescending(r => r.RequestDate)
+                .ToListAsync();
+        }
+
 
         public async Task<bool> ReviewStockRequestAsync(int requestId, string status, string managerId, string managerName)
         {

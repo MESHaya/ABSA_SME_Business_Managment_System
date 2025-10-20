@@ -31,6 +31,13 @@ namespace TestAbsa.Data
                 .WithMany(s => s.Products)
                 .HasForeignKey(p => p.SupplierId)
                 .IsRequired(false); // A product might not have a supplier initially
+
+            // ApplicationUser self-referencing relationship for approval
+            builder.Entity<ApplicationUser>()
+                .HasOne(u => u.ApprovedByManager)
+                .WithMany()
+                .HasForeignKey(u => u.ApprovedByManagerId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

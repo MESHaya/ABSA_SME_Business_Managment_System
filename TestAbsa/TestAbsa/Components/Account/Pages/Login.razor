@@ -1,4 +1,4 @@
-﻿@page "/Account/Login"
+﻿@page "/"
 
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Authentication
@@ -6,6 +6,7 @@
 @using TestAbsa.Data
 
 @inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
 @inject ILogger<Login> Logger
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
@@ -87,13 +88,40 @@
 
     public async Task LoginUser()
     {
+        // Get the user first to check approval status
+        var user = await UserManager.FindByEmailAsync(Input.Email);
+
+        if (user != null && !user.IsApproved)
+        {
+            errorMessage = "Error: Your account is pending approval. Please wait for a manager to approve your registration.";
+            Logger.LogWarning("User {Email} attempted to login but account is not approved.", Input.Email);
+            return;
+        }
+
         // This doesn't count login failures towards account lockout
         // To enable password failures to trigger account lockout, set lockoutOnFailure: true
         var result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
+
         if (result.Succeeded)
         {
             Logger.LogInformation("User logged in.");
-            RedirectManager.RedirectTo(ReturnUrl);
+
+            // Determine redirect based on user role
+            var roles = await UserManager.GetRolesAsync(user!);
+
+            if (roles.Contains("Manager"))
+            {
+                RedirectManager.RedirectTo(ReturnUrl ?? "/manager/dashboard");
+            }
+            else if (roles.Contains("Employee"))
+            {
+                RedirectManager.RedirectTo(ReturnUrl ?? "/employee/dashboard");
+            }
+            else
+            {
+                // Fallback for users without specific roles
+                RedirectManager.RedirectTo(ReturnUrl ?? "/");
+            }
         }
         else if (result.RequiresTwoFactor)
         {

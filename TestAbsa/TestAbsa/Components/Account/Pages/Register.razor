@@ -8,6 +8,7 @@
 @using TestAbsa.Data
 
 @inject UserManager<ApplicationUser> UserManager
+@inject RoleManager<IdentityRole> RoleManager
 @inject IUserStore<ApplicationUser> UserStore
 @inject SignInManager<ApplicationUser> SignInManager
 @inject IEmailSender<ApplicationUser> EmailSender
@@ -27,21 +28,41 @@
             <h2>Create a new account.</h2>
             <hr />
             <ValidationSummary class="text-danger" role="alert" />
+
             <div class="form-floating mb-3">
                 <InputText @bind-Value="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
                 <label for="email">Email</label>
                 <ValidationMessage For="() => Input.Email" class="text-danger" />
             </div>
+
             <div class="form-floating mb-3">
                 <InputText type="password" @bind-Value="Input.Password" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
                 <label for="password">Password</label>
                 <ValidationMessage For="() => Input.Password" class="text-danger" />
             </div>
+
             <div class="form-floating mb-3">
                 <InputText type="password" @bind-Value="Input.ConfirmPassword" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
                 <label for="confirm-password">Confirm Password</label>
                 <ValidationMessage For="() => Input.ConfirmPassword" class="text-danger" />
             </div>
+
+            <div class="form-floating mb-3">
+                <InputSelect @bind-Value="Input.Role" class="form-select" aria-required="true">
+                    <option value="Employee">Employee</option>
+                    <option value="Manager">Manager</option>
+                </InputSelect>
+                <label for="role">Register As</label>
+                <ValidationMessage For="() => Input.Role" class="text-danger" />
+            </div>
+
+            @if (Input.Role == "Employee")
+            {
+                <div class="alert alert-info" role="alert">
+                    <i class="bi bi-info-circle"></i> Employee accounts require manager approval before you can sign in.
+                </div>
+            }
+
             <button type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
         </EditForm>
     </div>
@@ -69,6 +90,21 @@
     {
         var user = CreateUser();
 
+        // Set role and approval status
+        user.UserRole = Input.Role;
+        user.RegistrationDate = DateTime.UtcNow;
+
+        // Managers are auto-approved, employees need approval
+        if (Input.Role == "Manager")
+        {
+            user.IsApproved = true;
+            user.ApprovedDate = DateTime.UtcNow;
+        }
+        else
+        {
+            user.IsApproved = false;
+        }
+
         await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
         var emailStore = GetEmailStore();
         await emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
@@ -80,7 +116,10 @@
             return;
         }
 
-        Logger.LogInformation("User created a new account with password.");
+        Logger.LogInformation("User created a new account with password. Role: {Role}", Input.Role);
+
+        // Add user to role
+        await UserManager.AddToRoleAsync(user, Input.Role);
 
         var userId = await UserManager.GetUserIdAsync(user);
         var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
@@ -91,15 +130,26 @@
 
         await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
 
-        if (UserManager.Options.SignIn.RequireConfirmedAccount)
+        // Different flow for managers vs employees
+        if (Input.Role == "Manager")
         {
-            RedirectManager.RedirectTo(
-                "Account/RegisterConfirmation",
-                new() { ["email"] = Input.Email, ["returnUrl"] = ReturnUrl });
-        }
+            if (UserManager.Options.SignIn.RequireConfirmedAccount)
+            {
+                RedirectManager.RedirectTo(
+                    "Account/RegisterConfirmation",
+                    new() { ["email"] = Input.Email, ["returnUrl"] = ReturnUrl });
+            }
 
-        await SignInManager.SignInAsync(user, isPersistent: false);
-        RedirectManager.RedirectTo(ReturnUrl);
+            await SignInManager.SignInAsync(user, isPersistent: false);
+            RedirectManager.RedirectTo(ReturnUrl);
+        }
+        else
+        {
+            // Employee - show pending approval message
+            RedirectManager.RedirectTo(
+                "Account/RegistrationPending",
+                new() { ["email"] = Input.Email });
+        }
     }
 
     private ApplicationUser CreateUser()
@@ -141,5 +191,9 @@
         [Display(Name = "Confirm password")]
         [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
         public string ConfirmPassword { get; set; } = "";
+
+        [Required]
+        [Display(Name = "Role")]
+        public string Role { get; set; } = "Employee";
     }
 }

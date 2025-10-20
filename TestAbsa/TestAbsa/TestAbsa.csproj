@@ -16,4 +16,12 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.15" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Components\Pages\Employee\CRM\" />
+    <Folder Include="Components\Pages\Employee\Finance\" />
+    <Folder Include="Components\Pages\Employee\HR\" />
+    <Folder Include="Components\Pages\Manager\CRM\" />
+    <Folder Include="Components\Pages\Manager\Finance\" />
+  </ItemGroup>
+
 </Project>

@@ -1,0 +1,151 @@
+﻿@page "/employee/dashboard"
+@layout TestAbsa.Components.Layout.MainLayout
+@using Microsoft.EntityFrameworkCore
+@using TestAbsa.Data
+@using TestAbsa.Data.Models
+@inject IDbContextFactory<ApplicationDbContext> DbContextFactory
+
+<div class="container mt-4">
+    <!-- Task & Stock Warning -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card p-3 shadow-sm">
+                <h5>Today's Task</h5>
+                <div class="text-muted">No tasks assigned yet.</div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card p-3 shadow-sm">
+                <h5>Stock Warning</h5>
+                @if (isLoading)
+                {
+                    <div class="text-muted">
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                        Loading stock warnings...
+                    </div>
+                }
+                else if (lowStockProducts.Any())
+                {
+                    <ul class="list-unstyled mb-0">
+                        @foreach (var product in lowStockProducts)
+                        {
+                            <li class="mb-2">
+                                @if (product.StockLevel == "critical")
+                                {
+                                    <span class="text-danger">🔴</span>
+                                }
+                                else
+                                {
+                                    <span class="text-warning">⚠️</span>
+                                }
+                                <strong>@product.Name</strong> —
+                                <span class="@(product.StockLevel == "critical" ? "text-danger" : "text-warning")">
+                                    @product.StockLevel (@product.CurrentStock units)
+                                </span>
+                            </li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <div class="text-success">
+                        ✅ All products are well stocked!
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div>
+        <h5>Quick Actions</h5>
+        <div class="row g-3 mt-2">
+            <div class="col-md-3 col-6">
+                <button class="btn btn-outline-primary w-100 h-100 p-3">
+                    ➕ <br />
+                    Record Transaction
+                </button>
+            </div>
+            <div class="col-md-3 col-6">
+                <button class="btn btn-outline-secondary w-100 h-100 p-3">Action 2</button>
+            </div>
+            <div class="col-md-3 col-6">
+                <button class="btn btn-outline-secondary w-100 h-100 p-3">Action 3</button>
+            </div>
+            <div class="col-md-3 col-6">
+                <button class="btn btn-outline-secondary w-100 h-100 p-3">Action 4</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<LowStockProduct> lowStockProducts = new();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadLowStockProducts();
+    }
+
+    private async Task LoadLowStockProducts()
+    {
+        try
+        {
+            isLoading = true;
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            // Option A: Dynamic based on MinLevel (RECOMMENDED)
+            lowStockProducts = await context.Products
+                .Where(p => p.CurrentStock <= p.MinLevel)
+                .OrderBy(p => p.CurrentStock)
+                .Select(p => new LowStockProduct
+                {
+                    Name = p.ItemName,
+                    CurrentStock = p.CurrentStock,
+                    MinLevel = p.MinLevel,
+                    StockLevel = p.CurrentStock == 0 ? "out of stock"
+                              : p.CurrentStock <= (p.MinLevel * 0.5) ? "critical"
+                              : "low"
+                })
+                .Take(10)
+                .ToListAsync();
+
+            // Option B: Fixed threshold (if you want to use a fixed number instead)
+            // Uncomment this and comment out Option A above if you prefer
+            /*
+            lowStockProducts = await context.Products
+                .Where(p => p.CurrentStock <= 20) // Products with 20 or fewer units
+                .OrderBy(p => p.CurrentStock)
+                .Select(p => new LowStockProduct
+                {
+                    Name = p.ItemName,
+                    CurrentStock = p.CurrentStock,
+                    MinLevel = 20,
+                    StockLevel = p.CurrentStock == 0 ? "out of stock"
+                              : p.CurrentStock <= 5 ? "critical"
+                              : "low"
+                })
+                .Take(10)
+                .ToListAsync();
+            */
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading low stock products: {ex.Message}");
+            lowStockProducts = new List<LowStockProduct>();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private class LowStockProduct
+    {
+        public string Name { get; set; } = "";
+        public int CurrentStock { get; set; }
+        public int MinLevel { get; set; }
+        public string StockLevel { get; set; } = "";
+    }
+}

@@ -69,11 +69,14 @@ namespace TestAbsa.Data.Models
         public string EmployeeName { get; set; } = string.Empty;
 
         // Foreign Key to the Product being requested
+        [Required(ErrorMessage = "Please select a product.")]
+        [Range(1, int.MaxValue, ErrorMessage = "Please select a valid product.")]
         public int ProductId { get; set; }
+
         public Product? Product { get; set; }
 
-        [Range(1, int.MaxValue)]
-        public int Quantity { get; set; }
+        [Range(1, 100000, ErrorMessage = "Quantity must be between 1 and 100,000.")]
+        public int Quantity { get; set; } = 1;
 
         public DateTime RequestDate { get; set; } = DateTime.UtcNow; // Changed to UtcNow for consistency
 

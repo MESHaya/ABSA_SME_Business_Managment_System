@@ -1,0 +1,27 @@
+﻿@namespace TestAbsa.Components.Layout
+
+<footer class="app-footer">
+    <div class="footer-left">
+        <p>&copy; @DateTime.Now.Year ABSA-SME-System. All rights reserved.</p>
+        <p>Version: @AppVersion</p>
+    </div>
+    <div class="footer-center">
+        <h4>Quick Links</h4>
+        <nav class="footer-links">
+            <a href="/employee/dashboard">Employee Dashboard</a>
+            <a href="/manager/dashboard">Manager Dashboard</a>
+            <a href="/settings">Settings</a>
+            <a href="/help">Help</a>
+        </nav>
+    </div>
+    <div class="footer-right">
+        <a href="/privacy">Privacy Policy</a> |
+        <a href="/help">Help</a> |
+        <a href="/support">Support</a>
+    </div>
+</footer>
+
+@code {
+    [Parameter]
+    public string AppVersion { get; set; } = "1.0.0";
+}

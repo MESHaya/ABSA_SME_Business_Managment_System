@@ -1,0 +1,193 @@
+is_global = true
+build_property.TargetFramework = net9.0
+build_property.TargetPlatformMinVersion = 
+build_property.UsingMicrosoftNETSdkWeb = true
+build_property.ProjectTypeGuids = 
+build_property.InvariantGlobalization = 
+build_property.PlatformNeutralAssembly = 
+build_property.EnforceExtendedAnalyzerRules = 
+build_property._SupportedPlatformList = Linux,macOS,Windows
+build_property.RootNamespace = ABSA_SME_Business_Managment_System
+build_property.RootNamespace = ABSA_SME_Business_Managment_System
+build_property.ProjectDir = C:\Users\munnh\TEST_DB\ABSA_SME_Business_Managment_System\
+build_property.EnableComHosting = 
+build_property.EnableGeneratedComInterfaceComImportInterop = 
+build_property.RazorLangVersion = 9.0
+build_property.SupportLocalizedComponentNames = 
+build_property.GenerateRazorMetadataSourceChecksumAttributes = 
+build_property.MSBuildProjectDirectory = C:\Users\munnh\TEST_DB\ABSA_SME_Business_Managment_System
+build_property._RazorSourceGeneratorDebug = 
+build_property.EffectiveAnalysisLevelStyle = 9.0
+build_property.EnableCodeStyleSeverity = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/App.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xBcHAucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Layout/DashboardLayout.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcRGFzaGJvYXJkTGF5b3V0LnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Layout/LoginLayout.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcTG9naW5MYXlvdXQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Pages/Employee/Dashboard.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFbXBsb3llZVxEYXNoYm9hcmQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Pages/Employee/Finance/AddExpense.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFbXBsb3llZVxGaW5hbmNlXEFkZEV4cGVuc2UucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Pages/Employee/Finance/AddIncome.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFbXBsb3llZVxGaW5hbmNlXEFkZEluY29tZS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Pages/Employee/Finance/Dashboard.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFbXBsb3llZVxGaW5hbmNlXERhc2hib2FyZC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Pages/Employee/HR/Dashboard.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFbXBsb3llZVxIUlxEYXNoYm9hcmQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Pages/Employee/HR/LeaveRequest.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFbXBsb3llZVxIUlxMZWF2ZVJlcXVlc3QucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Pages/Employee/HR/Payslips.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFbXBsb3llZVxIUlxQYXlzbGlwcy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Pages/Employee/Inventory/Dashboard.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFbXBsb3llZVxJbnZlbnRvcnlcRGFzaGJvYXJkLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Pages/Employee/Inventory/StockRequest.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFbXBsb3llZVxJbnZlbnRvcnlcU3RvY2tSZXF1ZXN0LnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Pages/Employee/Inventory/StockRequestForm.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFbXBsb3llZVxJbnZlbnRvcnlcU3RvY2tSZXF1ZXN0Rm9ybS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Pages/Employee/Profile.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFbXBsb3llZVxQcm9maWxlLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Pages/Login.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xMb2dpbi5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Pages/Manager/CRM/AddCustomer.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xNYW5hZ2VyXENSTVxBZGRDdXN0b21lci5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Pages/Manager/CRM/AddInteractionLog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xNYW5hZ2VyXENSTVxBZGRJbnRlcmFjdGlvbkxvZy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Pages/Manager/CRM/Dashboard.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xNYW5hZ2VyXENSTVxEYXNoYm9hcmQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Pages/Manager/Dashboard.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xNYW5hZ2VyXERhc2hib2FyZC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Pages/Manager/Finance/Dashboard.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xNYW5hZ2VyXEZpbmFuY2VcRGFzaGJvYXJkLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Pages/Manager/Finance/GenerateInvoices.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xNYW5hZ2VyXEZpbmFuY2VcR2VuZXJhdGVJbnZvaWNlcy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Pages/Manager/HR/EmployeeManagement.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xNYW5hZ2VyXEhSXEVtcGxveWVlTWFuYWdlbWVudC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Pages/Manager/HR/ManageLeaveRequest.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xNYW5hZ2VyXEhSXE1hbmFnZUxlYXZlUmVxdWVzdC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Pages/Manager/Inventory/Dashboard.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xNYW5hZ2VyXEludmVudG9yeVxEYXNoYm9hcmQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Pages/Manager/Inventory/StockRequests.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xNYW5hZ2VyXEludmVudG9yeVxTdG9ja1JlcXVlc3RzLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Pages/Manager/Widgets/KPICard.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xNYW5hZ2VyXFdpZGdldHNcS1BJQ2FyZC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Pages/Manager/Widgets/LowStockCard.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xNYW5hZ2VyXFdpZGdldHNcTG93U3RvY2tDYXJkLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Pages/Manager/Widgets/PendingApprovals.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xNYW5hZ2VyXFdpZGdldHNcUGVuZGluZ0FwcHJvdmFscy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Pages/Manager/Widgets/TotalsCards.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xNYW5hZ2VyXFdpZGdldHNcVG90YWxzQ2FyZHMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Pages/Settings.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xTZXR0aW5ncy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Routes.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xSb3V0ZXMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Shared/Header.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcSGVhZGVyLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Shared/NotificationBell.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcTm90aWZpY2F0aW9uQmVsbC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Shared/UserProfileMenu.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcVXNlclByb2ZpbGVNZW51LnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Tables/InventoryTable.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xUYWJsZXNcSW52ZW50b3J5VGFibGUucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Tables/InvoiceTable.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xUYWJsZXNcSW52b2ljZVRhYmxlLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Tables/SupplierTable.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xUYWJsZXNcU3VwcGxpZXJUYWJsZS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Tables/TransactionTable.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xUYWJsZXNcVHJhbnNhY3Rpb25UYWJsZS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Tables/WorkloadTable.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xUYWJsZXNcV29ya2xvYWRUYWJsZS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/_Imports.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xfSW1wb3J0cy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Layout/MainLayout.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcTWFpbkxheW91dC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-mszyshj9yr
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Shared/Footer.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcRm9vdGVyLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-3dg97apaxw
+
+[C:/Users/munnh/TEST_DB/ABSA_SME_Business_Managment_System/Components/Shared/NavMenu.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcTmF2TWVudS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-jv06q6hhh9
