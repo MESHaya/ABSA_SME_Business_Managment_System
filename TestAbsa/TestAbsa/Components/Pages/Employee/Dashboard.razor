@@ -1,22 +1,31 @@
 ﻿@page "/employee/dashboard"
 @layout TestAbsa.Components.Layout.MainLayout
+@rendermode InteractiveServer
 @using Microsoft.EntityFrameworkCore
 @using TestAbsa.Data
 @using TestAbsa.Data.Models
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Components.Authorization
 @inject IDbContextFactory<ApplicationDbContext> DbContextFactory
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <div class="container mt-4">
-    <!-- Task & Stock Warning -->
+    <!-- Task & Stock Warning Section -->
     <div class="row mb-4">
+        <!-- Today's Task -->
         <div class="col-md-6">
             <div class="card p-3 shadow-sm">
                 <h5>Today's Task</h5>
                 <div class="text-muted">No tasks assigned yet.</div>
             </div>
         </div>
+
+        <!-- Stock Warning -->
         <div class="col-md-6">
             <div class="card p-3 shadow-sm">
                 <h5>Stock Warning</h5>
+
                 @if (isLoading)
                 {
                     <div class="text-muted">
@@ -38,6 +47,7 @@
                                 {
                                     <span class="text-warning">⚠️</span>
                                 }
+
                                 <strong>@product.Name</strong> —
                                 <span class="@(product.StockLevel == "critical" ? "text-danger" : "text-warning")">
                                     @product.StockLevel (@product.CurrentStock units)
@@ -52,28 +62,6 @@
                         ✅ All products are well stocked!
                     </div>
                 }
-            </div>
-        </div>
-    </div>
-
-    <!-- Quick Actions -->
-    <div>
-        <h5>Quick Actions</h5>
-        <div class="row g-3 mt-2">
-            <div class="col-md-3 col-6">
-                <button class="btn btn-outline-primary w-100 h-100 p-3">
-                    ➕ <br />
-                    Record Transaction
-                </button>
-            </div>
-            <div class="col-md-3 col-6">
-                <button class="btn btn-outline-secondary w-100 h-100 p-3">Action 2</button>
-            </div>
-            <div class="col-md-3 col-6">
-                <button class="btn btn-outline-secondary w-100 h-100 p-3">Action 3</button>
-            </div>
-            <div class="col-md-3 col-6">
-                <button class="btn btn-outline-secondary w-100 h-100 p-3">Action 4</button>
             </div>
         </div>
     </div>
@@ -95,7 +83,6 @@
             isLoading = true;
             using var context = await DbContextFactory.CreateDbContextAsync();
 
-            // Option A: Dynamic based on MinLevel (RECOMMENDED)
             lowStockProducts = await context.Products
                 .Where(p => p.CurrentStock <= p.MinLevel)
                 .OrderBy(p => p.CurrentStock)
@@ -110,25 +97,6 @@
                 })
                 .Take(10)
                 .ToListAsync();
-
-            // Option B: Fixed threshold (if you want to use a fixed number instead)
-            // Uncomment this and comment out Option A above if you prefer
-            /*
-            lowStockProducts = await context.Products
-                .Where(p => p.CurrentStock <= 20) // Products with 20 or fewer units
-                .OrderBy(p => p.CurrentStock)
-                .Select(p => new LowStockProduct
-                {
-                    Name = p.ItemName,
-                    CurrentStock = p.CurrentStock,
-                    MinLevel = 20,
-                    StockLevel = p.CurrentStock == 0 ? "out of stock"
-                              : p.CurrentStock <= 5 ? "critical"
-                              : "low"
-                })
-                .Take(10)
-                .ToListAsync();
-            */
         }
         catch (Exception ex)
         {

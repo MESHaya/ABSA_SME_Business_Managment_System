@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "X8HNtZy2QzM=",
+  "dgSpecHash": "t3aTmYBxTBE=",
   "success": true,
-  "projectFilePath": "C:\\Users\\munnh\\TEST_DB\\TestAbsa\\TestAbsa.Client\\TestAbsa.Client.csproj",
+  "projectFilePath": "C:\\Users\\munnh\\source\\repos\\TEST_DB\\TestAbsa\\TestAbsa.Client\\TestAbsa.Client.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\munnh\\.nuget\\packages\\microsoft.aspnetcore.authorization\\8.0.15\\microsoft.aspnetcore.authorization.8.0.15.nupkg.sha512",
     "C:\\Users\\munnh\\.nuget\\packages\\microsoft.aspnetcore.components\\8.0.15\\microsoft.aspnetcore.components.8.0.15.nupkg.sha512",

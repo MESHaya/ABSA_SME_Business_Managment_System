@@ -1,11 +1,19 @@
 is_global = true
 build_property.TargetFramework = net8.0
+build_property.TargetFramework = net8.0
+build_property.TargetPlatformMinVersion = 
 build_property.TargetPlatformMinVersion = 
 build_property.UsingMicrosoftNETSdkWeb = true
+build_property.UsingMicrosoftNETSdkWeb = true
+build_property.ProjectTypeGuids = 
 build_property.ProjectTypeGuids = 
 build_property.InvariantGlobalization = 
+build_property.InvariantGlobalization = 
+build_property.PlatformNeutralAssembly = 
 build_property.PlatformNeutralAssembly = 
 build_property.EnforceExtendedAnalyzerRules = 
+build_property.EnforceExtendedAnalyzerRules = 
+build_property._SupportedPlatformList = Linux,macOS,Windows
 build_property._SupportedPlatformList = Linux,macOS,Windows
 build_property.RootNamespace = TestAbsa
 build_property.RootNamespace = TestAbsa
@@ -176,12 +184,16 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xBcHAucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/munnh/source/repos/TEST_DB/TestAbsa/TestAbsa/Components/Layout/Footer.razor]
-build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcRm9vdGVyLnJhem9y
-build_metadata.AdditionalFiles.CssScope = 
-
 [C:/Users/munnh/source/repos/TEST_DB/TestAbsa/TestAbsa/Components/Pages/Employee/Dashboard.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFbXBsb3llZVxEYXNoYm9hcmQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/source/repos/TEST_DB/TestAbsa/TestAbsa/Components/Pages/Employee/HR/LeaveRequests.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFbXBsb3llZVxIUlxMZWF2ZVJlcXVlc3RzLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/source/repos/TEST_DB/TestAbsa/TestAbsa/Components/Pages/Employee/HR/Timesheets.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFbXBsb3llZVxIUlxUaW1lc2hlZXRzLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/munnh/source/repos/TEST_DB/TestAbsa/TestAbsa/Components/Pages/Employee/Inventory/AddProduct.razor]
@@ -220,6 +232,22 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xNYW5hZ2VyXERhc2hib2FyZC5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Users/munnh/source/repos/TEST_DB/TestAbsa/TestAbsa/Components/Pages/Manager/HR/Dashboard.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xNYW5hZ2VyXEhSXERhc2hib2FyZC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/source/repos/TEST_DB/TestAbsa/TestAbsa/Components/Pages/Manager/HR/TimesheetApproval.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xNYW5hZ2VyXEhSXFRpbWVzaGVldEFwcHJvdmFsLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/source/repos/TEST_DB/TestAbsa/TestAbsa/Components/Pages/Manager/HR/UserManagementSection.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xNYW5hZ2VyXEhSXFVzZXJNYW5hZ2VtZW50U2VjdGlvbi5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/source/repos/TEST_DB/TestAbsa/TestAbsa/Components/Pages/Manager/Inventory/CreatePurchaseOrder.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xNYW5hZ2VyXEludmVudG9yeVxDcmVhdGVQdXJjaGFzZU9yZGVyLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Users/munnh/source/repos/TEST_DB/TestAbsa/TestAbsa/Components/Pages/Manager/Inventory/Dashboard.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xNYW5hZ2VyXEludmVudG9yeVxEYXNoYm9hcmQucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
@@ -232,16 +260,12 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xNYW5hZ2VyXEludmVudG9yeVxNYW5hZ2VyU3RvY2tSZXF1ZXN0cy5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/munnh/source/repos/TEST_DB/TestAbsa/TestAbsa/Components/Pages/Manager/PendingUsers.razor]
-build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xNYW5hZ2VyXFBlbmRpbmdVc2Vycy5yYXpvcg==
+[C:/Users/munnh/source/repos/TEST_DB/TestAbsa/TestAbsa/Components/Pages/Manager/Inventory/PurchaseOrders.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xNYW5hZ2VyXEludmVudG9yeVxQdXJjaGFzZU9yZGVycy5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/munnh/source/repos/TEST_DB/TestAbsa/TestAbsa/Components/Pages/Manager/ReviewRequests.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xNYW5hZ2VyXFJldmlld1JlcXVlc3RzLnJhem9y
-build_metadata.AdditionalFiles.CssScope = 
-
-[C:/Users/munnh/source/repos/TEST_DB/TestAbsa/TestAbsa/Components/Pages/Shared/Header.razor]
-build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xTaGFyZWRcSGVhZGVyLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/munnh/source/repos/TEST_DB/TestAbsa/TestAbsa/Components/Pages/Shared/NotificationBell.razor]
@@ -256,6 +280,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xfSW1wb3J0cy5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Users/munnh/source/repos/TEST_DB/TestAbsa/TestAbsa/Components/Layout/Footer.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcRm9vdGVyLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-bxrh8gxm4e
+
 [C:/Users/munnh/source/repos/TEST_DB/TestAbsa/TestAbsa/Components/Layout/MainLayout.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcTWFpbkxheW91dC5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = b-9o619u5v4c
@@ -263,3 +291,7 @@ build_metadata.AdditionalFiles.CssScope = b-9o619u5v4c
 [C:/Users/munnh/source/repos/TEST_DB/TestAbsa/TestAbsa/Components/Layout/NavMenu.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcTmF2TWVudS5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = b-ma8lenznbn
+
+[C:/Users/munnh/source/repos/TEST_DB/TestAbsa/TestAbsa/Components/Pages/Shared/Header.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xTaGFyZWRcSGVhZGVyLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-lcsv8p2v0p

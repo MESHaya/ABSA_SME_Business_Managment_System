@@ -1,0 +1,1095 @@
+﻿@page "/Manager/HR/Dashboard"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using TestAbsa.Data
+@using TestAbsa.Data.Models
+@attribute [Authorize(Roles = "Manager")]
+@rendermode InteractiveServer
+
+@inject UserManager<ApplicationUser> UserManager
+@inject IDbContextFactory<ApplicationDbContext> DbContextFactory
+@inject ILogger<Dashboard> Logger
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>HR Dashboard</PageTitle>
+
+<h1>HR Management Dashboard</h1>
+
+
+
+<div class="mb-4">
+    <ul class="nav nav-tabs">
+        <li class="nav-item">
+            <button class="nav-link @(mainView == MainView.LeaveManagement ? "active" : "")"
+                    @onclick="() => SwitchMainView(MainView.LeaveManagement)">
+                <i class="bi bi-calendar-check"></i> Leave Management
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link @(mainView == MainView.UserManagement ? "active" : "")"
+                    @onclick="() => SwitchMainView(MainView.UserManagement)">
+                <i class="bi bi-people"></i> User Management
+            </button>
+        </li>
+    </ul>
+</div>
+
+@if (mainView == MainView.LeaveManagement)
+{
+    @* Leave Management Section *@
+    <div class="mb-3">
+        <button class="btn @(leaveView == LeaveViewType.Pending ? "btn-primary" : "btn-outline-primary") me-2"
+                @onclick="() => ToggleLeaveView(LeaveViewType.Pending)"
+                disabled="@isLoading">
+            <i class="bi bi-clock-history"></i> Pending Requests
+            @if (leaveView == LeaveViewType.Pending && pendingLeaves != null)
+            {
+                <span class="badge bg-light text-dark ms-1">@pendingLeaves.Count</span>
+            }
+        </button>
+        <button class="btn @(leaveView == LeaveViewType.Approved ? "btn-primary" : "btn-outline-primary") me-2"
+                @onclick="() => ToggleLeaveView(LeaveViewType.Approved)"
+                disabled="@isLoading">
+            <i class="bi bi-check-circle"></i> Approved Requests
+            @if (leaveView == LeaveViewType.Approved && approvedLeaves != null)
+            {
+                <span class="badge bg-light text-dark ms-1">@approvedLeaves.Count</span>
+            }
+        </button>
+        <button class="btn @(leaveView == LeaveViewType.Rejected ? "btn-primary" : "btn-outline-primary")"
+                @onclick="() => ToggleLeaveView(LeaveViewType.Rejected)"
+                disabled="@isLoading">
+            <i class="bi bi-x-circle"></i> Rejected Requests
+            @if (leaveView == LeaveViewType.Rejected && rejectedLeaves != null)
+            {
+                <span class="badge bg-light text-dark ms-1">@rejectedLeaves.Count</span>
+            }
+        </button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(statusMessage))
+    {
+        <div class="alert @(statusMessage.StartsWith("Error") ? "alert-danger" : "alert-success") alert-dismissible fade show" role="alert">
+            @statusMessage
+            <button type="button" class="btn-close" @onclick="() => statusMessage = null"></button>
+        </div>
+    }
+
+    @if (isLoading)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else if (leaveView == LeaveViewType.Pending)
+    {
+        @if (pendingLeaves == null || !pendingLeaves.Any())
+        {
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> No pending leave requests at this time.
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Leave Type</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                            <th>Days</th>
+                            <th>Reason</th>
+                            <th>Requested</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var leave in pendingLeaves)
+                        {
+                            <tr>
+                                <td>@GetEmployeeEmail(leave.EmployeeId)</td>
+                                <td><span class="badge bg-secondary">@leave.LeaveType</span></td>
+                                <td>@leave.StartDate.ToString("yyyy-MM-dd")</td>
+                                <td>@leave.EndDate.ToString("yyyy-MM-dd")</td>
+                                <td><strong>@leave.TotalDays</strong></td>
+                                <td><small>@leave.Reason</small></td>
+                                <td>@leave.RequestDate.ToString("yyyy-MM-dd")</td>
+                                <td>
+                                    <button class="btn btn-success btn-sm"
+                                            @onclick="() => ShowApprovalModal(leave)"
+                                            disabled="@isProcessing">
+                                        <i class="bi bi-check-circle"></i> Approve
+                                    </button>
+                                    <button class="btn btn-danger btn-sm ms-1"
+                                            @onclick="() => ShowRejectionModal(leave)"
+                                            disabled="@isProcessing">
+                                        <i class="bi bi-x-circle"></i> Reject
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    }
+    else if (leaveView == LeaveViewType.Approved)
+    {
+        @if (approvedLeaves == null || !approvedLeaves.Any())
+        {
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> No approved leave requests found.
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Leave Type</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                            <th>Days</th>
+                            <th>Approved Date</th>
+                            <th>Approved By</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var leave in approvedLeaves)
+                        {
+                            <tr>
+                                <td>@GetEmployeeEmail(leave.EmployeeId)</td>
+                                <td><span class="badge bg-success">@leave.LeaveType</span></td>
+                                <td>@leave.StartDate.ToString("yyyy-MM-dd")</td>
+                                <td>@leave.EndDate.ToString("yyyy-MM-dd")</td>
+                                <td><strong>@leave.TotalDays</strong></td>
+                                <td>
+                                    @if (leave.ReviewedDate.HasValue)
+                                    {
+                                        @leave.ReviewedDate.Value.ToString("yyyy-MM-dd HH:mm")
+                                    }
+                                </td>
+                                <td>@GetManagerEmail(leave.ManagerId)</td>
+                            </tr>
+                            @if (!string.IsNullOrEmpty(leave.ManagerComments))
+                            {
+                                <tr>
+                                    <td colspan="7" class="bg-light">
+                                        <small><strong>Comments:</strong> @leave.ManagerComments</small>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    }
+    else if (leaveView == LeaveViewType.Rejected)
+    {
+        @if (rejectedLeaves == null || !rejectedLeaves.Any())
+        {
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> No rejected leave requests found.
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Leave Type</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                            <th>Days</th>
+                            <th>Rejected Date</th>
+                            <th>Rejected By</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var leave in rejectedLeaves)
+                        {
+                            <tr>
+                                <td>@GetEmployeeEmail(leave.EmployeeId)</td>
+                                <td><span class="badge bg-danger">@leave.LeaveType</span></td>
+                                <td>@leave.StartDate.ToString("yyyy-MM-dd")</td>
+                                <td>@leave.EndDate.ToString("yyyy-MM-dd")</td>
+                                <td><strong>@leave.TotalDays</strong></td>
+                                <td>
+                                    @if (leave.ReviewedDate.HasValue)
+                                    {
+                                        @leave.ReviewedDate.Value.ToString("yyyy-MM-dd HH:mm")
+                                    }
+                                </td>
+                                <td>@GetManagerEmail(leave.ManagerId)</td>
+                            </tr>
+                            @if (!string.IsNullOrEmpty(leave.ManagerComments))
+                            {
+                                <tr>
+                                    <td colspan="7" class="bg-light">
+                                        <small><strong>Reason for rejection:</strong> @leave.ManagerComments</small>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    }
+
+    @* Leave Approval/Rejection Modal *@
+    @if (showLeaveModal && selectedLeave != null)
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            @if (isApproving)
+                            {
+                                <i class="bi bi-check-circle text-success"></i> <text>Approve Leave Request</text>
+                            }
+                            else
+                            {
+                                <i class="bi bi-x-circle text-danger"></i> <text>Reject Leave Request</text>
+                            }
+                        </h5>
+                        <button type="button" class="btn-close" @onclick="CloseLeaveModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <strong>Employee:</strong> @GetEmployeeEmail(selectedLeave.EmployeeId)
+                        </div>
+                        <div class="mb-3">
+                            <strong>Leave Type:</strong> @selectedLeave.LeaveType
+                        </div>
+                        <div class="mb-3">
+                            <strong>Duration:</strong> @selectedLeave.StartDate.ToString("yyyy-MM-dd") to @selectedLeave.EndDate.ToString("yyyy-MM-dd") (@selectedLeave.TotalDays days)
+                        </div>
+                        <div class="mb-3">
+                            <strong>Reason:</strong> @selectedLeave.Reason
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Manager Comments @(isApproving ? "(Optional)" : "(Required)")</label>
+                            <textarea class="form-control" rows="3" @bind="managerComments" placeholder="Add your comments here..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseLeaveModal">Cancel</button>
+                        @if (isApproving)
+                        {
+                            <button type="button" class="btn btn-success" @onclick="ApproveLeave" disabled="@isProcessing">
+                                @if (isProcessing)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                Approve
+                            </button>
+                        }
+                        else
+                        {
+                            <button type="button" class="btn btn-danger" @onclick="RejectLeave" disabled="@isProcessing">
+                                @if (isProcessing)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                Reject
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+else if (mainView == MainView.UserManagement)
+{
+    @* User Management Section *@
+    <div class="mb-3">
+        <button class="btn @(userView == UserViewType.Pending ? "btn-primary" : "btn-outline-primary") me-2"
+                @onclick="() => ToggleUserView(UserViewType.Pending)"
+                disabled="@isLoading">
+            <i class="bi bi-clock-history"></i> Pending Registrations
+            @if (userView == UserViewType.Pending && pendingUsers != null)
+            {
+                <span class="badge bg-light text-dark ms-1">@pendingUsers.Count</span>
+            }
+        </button>
+        <button class="btn @(userView == UserViewType.Approved ? "btn-primary" : "btn-outline-primary") me-2"
+                @onclick="() => ToggleUserView(UserViewType.Approved)"
+                disabled="@isLoading">
+            <i class="bi bi-check-circle"></i> Approved Employees
+            @if (userView == UserViewType.Approved && approvedUsers != null)
+            {
+                <span class="badge bg-light text-dark ms-1">@approvedUsers.Count</span>
+            }
+        </button>
+        <button class="btn @(userView == UserViewType.Rejected ? "btn-primary" : "btn-outline-primary")"
+                @onclick="() => ToggleUserView(UserViewType.Rejected)"
+                disabled="@isLoading">
+            <i class="bi bi-x-circle"></i> Rejected Users
+            @if (userView == UserViewType.Rejected && rejectedUsers != null)
+            {
+                <span class="badge bg-light text-dark ms-1">@rejectedUsers.Count</span>
+            }
+        </button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(statusMessage))
+    {
+        <div class="alert @(statusMessage.StartsWith("Error") ? "alert-danger" : "alert-success") alert-dismissible fade show" role="alert">
+            @statusMessage
+            <button type="button" class="btn-close" @onclick="() => statusMessage = null"></button>
+        </div>
+    }
+
+    @if (isLoading)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else if (userView == UserViewType.Approved)
+    {
+        @if (approvedUsers == null || !approvedUsers.Any())
+        {
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> No approved employees found.
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Registration Date</th>
+                            <th>Approved Date</th>
+                            <th>Approved By</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in approvedUsers)
+                        {
+                            <tr>
+                                <td>@user.Email</td>
+                                <td><span class="badge bg-success">@user.UserRole</span></td>
+                                <td>@user.RegistrationDate.ToString("yyyy-MM-dd HH:mm")</td>
+                                <td>
+                                    @if (user.ApprovedDate.HasValue)
+                                    {
+                                        @user.ApprovedDate.Value.ToString("yyyy-MM-dd HH:mm")
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">N/A</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(user.ApprovedByManagerId))
+                                    {
+                                        @GetManagerEmailFromDict(user.ApprovedByManagerId)
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">N/A</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    }
+    else if (userView == UserViewType.Rejected)
+    {
+        @if (rejectedUsers == null || !rejectedUsers.Any())
+        {
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> No rejected users found.
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Registration Date</th>
+                            <th>Rejected Date</th>
+                            <th>Rejected By</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in rejectedUsers)
+                        {
+                            <tr>
+                                <td>@user.Email</td>
+                                <td><span class="badge bg-danger">@user.UserRole</span></td>
+                                <td>@user.RegistrationDate.ToString("yyyy-MM-dd HH:mm")</td>
+                                <td>
+                                    @if (user.RejectedDate.HasValue)
+                                    {
+                                        @user.RejectedDate.Value.ToString("yyyy-MM-dd HH:mm")
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">N/A</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(user.RejectedByManagerId))
+                                    {
+                                        @GetManagerEmailFromDict(user.RejectedByManagerId)
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">N/A</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    }
+    else
+    {
+        @if (pendingUsers == null || !pendingUsers.Any())
+        {
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> No pending user registrations at this time.
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Registration Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in pendingUsers)
+                        {
+                            <tr>
+                                <td>@user.Email</td>
+                                <td><span class="badge bg-secondary">@user.UserRole</span></td>
+                                <td>@user.RegistrationDate.ToString("yyyy-MM-dd HH:mm")</td>
+                                <td>
+                                    <button class="btn btn-success btn-sm"
+                                            @onclick="() => ApproveUser(user.Id)"
+                                            disabled="@isProcessing">
+                                        <i class="bi bi-check-circle"></i> Approve
+                                    </button>
+                                    <button class="btn btn-danger btn-sm ms-2"
+                                            @onclick="() => RejectUser(user.Id)"
+                                            disabled="@isProcessing">
+                                        <i class="bi bi-x-circle"></i> Reject
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    }
+}
+
+@code {
+    private enum MainView { LeaveManagement, UserManagement }
+    private enum LeaveViewType { Pending, Approved, Rejected }
+    private enum UserViewType { Pending, Approved, Rejected }
+
+    // Main view state
+    private MainView mainView = MainView.LeaveManagement;
+    private LeaveViewType leaveView = LeaveViewType.Pending;
+    private UserViewType userView = UserViewType.Pending;
+
+    // Leave Management
+    private List<LeaveRequest>? pendingLeaves;
+    private List<LeaveRequest>? approvedLeaves;
+    private List<LeaveRequest>? rejectedLeaves;
+    private Dictionary<string, string> userEmails = new();
+    private bool showLeaveModal = false;
+    private bool isApproving = false;
+    private LeaveRequest? selectedLeave;
+    private string? managerComments;
+    private string? currentManagerId;
+
+    // User Management
+    private List<ApplicationUser>? pendingUsers;
+    private List<ApplicationUser>? approvedUsers;
+    private List<ApplicationUser>? rejectedUsers;
+    private Dictionary<string, string> managerEmails = new();
+
+    // Shared state
+    private string? statusMessage;
+    private bool isLoading = true;
+    private bool isProcessing = false;
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthState { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await LoadCurrentManager();
+            await LoadPendingLeaves();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error during initialization");
+            statusMessage = $"Error during initialization: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadCurrentManager()
+    {
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var claimsPrincipal = authState.User;
+            
+            // Get user ID from claims instead of calling UserManager
+            currentManagerId = UserManager.GetUserId(claimsPrincipal);
+            
+            if (string.IsNullOrEmpty(currentManagerId))
+            {
+                Logger.LogWarning("Unable to retrieve current manager ID");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading current manager");
+        }
+    }
+
+    private async Task SwitchMainView(MainView view)
+    {
+        mainView = view;
+        statusMessage = null;
+        isLoading = true;
+
+        try
+        {
+            if (view == MainView.LeaveManagement)
+            {
+                await ToggleLeaveView(LeaveViewType.Pending);
+            }
+            else
+            {
+                await ToggleUserView(UserViewType.Pending);
+            }
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    #region Leave Management Methods
+
+    private async Task ToggleLeaveView(LeaveViewType viewType)
+    {
+        leaveView = viewType;
+        isLoading = true;
+        statusMessage = null;
+
+        try
+        {
+            switch (viewType)
+            {
+                case LeaveViewType.Pending:
+                    await LoadPendingLeaves();
+                    break;
+                case LeaveViewType.Approved:
+                    await LoadApprovedLeaves();
+                    break;
+                case LeaveViewType.Rejected:
+                    await LoadRejectedLeaves();
+                    break;
+            }
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadPendingLeaves()
+    {
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            pendingLeaves = await context.LeaveRequests
+                .Where(l => l.Status == "Pending")
+                .OrderByDescending(l => l.RequestDate)
+                .ToListAsync();
+
+            if (pendingLeaves == null)
+                pendingLeaves = new List<LeaveRequest>();
+
+            await LoadUserEmails(pendingLeaves);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading pending leaves");
+            statusMessage = $"Error loading pending leaves: {ex.Message}";
+        }
+    }
+
+    private async Task LoadApprovedLeaves()
+    {
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            approvedLeaves = await context.LeaveRequests
+                .Where(l => l.Status == "Approved")
+                .OrderByDescending(l => l.ReviewedDate)
+                .ToListAsync();
+
+            if (approvedLeaves == null)
+                approvedLeaves = new List<LeaveRequest>();
+
+            await LoadUserEmails(approvedLeaves);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading approved leaves");
+            statusMessage = $"Error loading approved leaves: {ex.Message}";
+        }
+    }
+
+    private async Task LoadRejectedLeaves()
+    {
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            rejectedLeaves = await context.LeaveRequests
+                .Where(l => l.Status == "Rejected")
+                .OrderByDescending(l => l.ReviewedDate)
+                .ToListAsync();
+
+            if (rejectedLeaves == null)
+                rejectedLeaves = new List<LeaveRequest>();
+
+            await LoadUserEmails(rejectedLeaves);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading rejected leaves");
+            statusMessage = $"Error loading rejected leaves: {ex.Message}";
+        }
+    }
+
+    private async Task LoadUserEmails(List<LeaveRequest> leaves)
+    {
+        var userIds = leaves.Select(l => l.EmployeeId)
+            .Concat(leaves.Where(l => !string.IsNullOrEmpty(l.ManagerId)).Select(l => l.ManagerId!))
+            .Distinct()
+            .Where(id => !userEmails.ContainsKey(id))
+            .ToList();
+
+        // Load emails one at a time to avoid concurrent DbContext access
+        foreach (var userId in userIds)
+        {
+            try
+            {
+                var user = await UserManager.FindByIdAsync(userId);
+                if (user != null && !string.IsNullOrEmpty(user.Email))
+                {
+                    userEmails[userId] = user.Email;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Error loading email for user {UserId}", userId);
+            }
+        }
+    }
+
+    private string GetEmployeeEmail(string userId)
+    {
+        return userEmails.TryGetValue(userId, out var email) ? email : "Unknown";
+    }
+
+    private string GetManagerEmail(string? managerId)
+    {
+        if (string.IsNullOrEmpty(managerId)) return "N/A";
+        return userEmails.TryGetValue(managerId, out var email) ? email : "Unknown";
+    }
+
+    private void ShowApprovalModal(LeaveRequest leave)
+    {
+        selectedLeave = leave;
+        isApproving = true;
+        managerComments = null;
+        showLeaveModal = true;
+    }
+
+    private void ShowRejectionModal(LeaveRequest leave)
+    {
+        selectedLeave = leave;
+        isApproving = false;
+        managerComments = null;
+        showLeaveModal = true;
+    }
+
+    private void CloseLeaveModal()
+    {
+        showLeaveModal = false;
+        selectedLeave = null;
+        managerComments = null;
+    }
+
+    private async Task ApproveLeave()
+    {
+        if (selectedLeave == null || string.IsNullOrEmpty(currentManagerId)) return;
+
+        isProcessing = true;
+        statusMessage = null;
+
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var leave = await context.LeaveRequests.FindAsync(selectedLeave.Id);
+            if (leave == null)
+            {
+                statusMessage = "Error: Leave request not found.";
+                return;
+            }
+
+            leave.Status = "Approved";
+            leave.ManagerId = currentManagerId;
+            leave.ReviewedDate = DateTime.UtcNow;
+            leave.ManagerComments = managerComments;
+
+            await context.SaveChangesAsync();
+
+            statusMessage = $"Leave request approved for {GetEmployeeEmail(leave.EmployeeId)}";
+            Logger.LogInformation("Manager {ManagerId} approved leave request {LeaveId}", currentManagerId, leave.Id);
+
+            CloseLeaveModal();
+            await LoadPendingLeaves();
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Error: {ex.Message}";
+            Logger.LogError(ex, "Error approving leave request");
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private async Task RejectLeave()
+    {
+        if (selectedLeave == null || string.IsNullOrEmpty(currentManagerId)) return;
+
+        if (string.IsNullOrWhiteSpace(managerComments))
+        {
+            statusMessage = "Error: Please provide a reason for rejection.";
+            return;
+        }
+
+        isProcessing = true;
+        statusMessage = null;
+
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var leave = await context.LeaveRequests.FindAsync(selectedLeave.Id);
+            if (leave == null)
+            {
+                statusMessage = "Error: Leave request not found.";
+                return;
+            }
+
+            leave.Status = "Rejected";
+            leave.ManagerId = currentManagerId;
+            leave.ReviewedDate = DateTime.UtcNow;
+            leave.ManagerComments = managerComments;
+
+            await context.SaveChangesAsync();
+
+            statusMessage = $"Leave request rejected for {GetEmployeeEmail(leave.EmployeeId)}";
+            Logger.LogInformation("Manager {ManagerId} rejected leave request {LeaveId}", currentManagerId, leave.Id);
+
+            CloseLeaveModal();
+            await LoadPendingLeaves();
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Error: {ex.Message}";
+            Logger.LogError(ex, "Error rejecting leave request");
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    #endregion
+
+    #region User Management Methods
+
+    private async Task ToggleUserView(UserViewType viewType)
+    {
+        userView = viewType;
+        isLoading = true;
+        statusMessage = null;
+
+        try
+        {
+            switch (viewType)
+            {
+                case UserViewType.Pending:
+                    await LoadPendingUsers();
+                    break;
+                case UserViewType.Approved:
+                    await LoadApprovedUsers();
+                    break;
+                case UserViewType.Rejected:
+                    await LoadRejectedUsers();
+                    break;
+            }
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadPendingUsers()
+    {
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+            pendingUsers = await context.Users
+                .Where(u => !u.IsApproved && !u.IsRejected && u.UserRole == "Employee")
+                .OrderBy(u => u.RegistrationDate)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading pending users");
+            statusMessage = $"Error loading users: {ex.Message}";
+        }
+    }
+
+    private async Task LoadApprovedUsers()
+    {
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+            approvedUsers = await context.Users
+                .Where(u => u.IsApproved && u.UserRole == "Employee")
+                .OrderByDescending(u => u.ApprovedDate)
+                .ToListAsync();
+
+            var managerIds = approvedUsers
+                .Where(u => !string.IsNullOrEmpty(u.ApprovedByManagerId))
+                .Select(u => u.ApprovedByManagerId!)
+                .Distinct()
+                .ToList();
+
+            // Load manager emails sequentially
+            foreach (var managerId in managerIds)
+            {
+                if (!managerEmails.ContainsKey(managerId))
+                {
+                    try
+                    {
+                        var manager = await UserManager.FindByIdAsync(managerId);
+                        if (manager != null && !string.IsNullOrEmpty(manager.Email))
+                        {
+                            managerEmails[managerId] = manager.Email;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogWarning(ex, "Error loading email for manager {ManagerId}", managerId);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading approved users");
+            statusMessage = $"Error loading approved users: {ex.Message}";
+        }
+    }
+
+    private async Task LoadRejectedUsers()
+    {
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+            rejectedUsers = await context.Users
+                .Where(u => u.IsRejected && u.UserRole == "Employee")
+                .OrderByDescending(u => u.RejectedDate)
+                .ToListAsync();
+
+            var managerIds = rejectedUsers
+                .Where(u => !string.IsNullOrEmpty(u.RejectedByManagerId))
+                .Select(u => u.RejectedByManagerId!)
+                .Distinct()
+                .ToList();
+
+            // Load manager emails sequentially
+            foreach (var managerId in managerIds)
+            {
+                if (!managerEmails.ContainsKey(managerId))
+                {
+                    try
+                    {
+                        var manager = await UserManager.FindByIdAsync(managerId);
+                        if (manager != null && !string.IsNullOrEmpty(manager.Email))
+                        {
+                            managerEmails[managerId] = manager.Email;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogWarning(ex, "Error loading email for manager {ManagerId}", managerId);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading rejected users");
+            statusMessage = $"Error loading rejected users: {ex.Message}";
+        }
+    }
+
+    private string GetManagerEmailFromDict(string managerId)
+    {
+        return managerEmails.TryGetValue(managerId, out var email) ? email : "Unknown";
+    }
+
+    private async Task ApproveUser(string userId)
+    {
+        if (isProcessing) return;
+
+        isProcessing = true;
+        statusMessage = null;
+
+        try
+        {
+            var user = await UserManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                statusMessage = "Error: User not found.";
+                return;
+            }
+
+            var authState = await AuthState!;
+            var currentUser = await UserManager.GetUserAsync(authState.User);
+
+            user.IsApproved = true;
+            user.ApprovedByManagerId = currentUser?.Id;
+            user.ApprovedDate = DateTime.UtcNow;
+
+            var result = await UserManager.UpdateAsync(user);
+
+            if (result.Succeeded)
+            {
+                statusMessage = $"Successfully approved {user.Email}";
+                Logger.LogInformation("Manager {ManagerId} approved user {UserId}", currentUser?.Id, userId);
+
+                await LoadPendingUsers();
+            }
+            else
+            {
+                statusMessage = $"Error: {string.Join(", ", result.Errors.Select(e => e.Description))}";
+            }
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Error: {ex.Message}";
+            Logger.LogError(ex, "Error approving user {UserId}", userId);
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private async Task RejectUser(string userId)
+    {
+        if (isProcessing) return;
+
+        isProcessing = true;
+        statusMessage = null;
+
+        try
+        {
+            var user = await UserManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                statusMessage = "Error: User not found.";
+                return;
+            }
+
+            var authState = await AuthState!;
+            var currentUser = await UserManager.GetUserAsync(authState.User);
+
+            user.IsRejected = true;
+            user.RejectedByManagerId = currentUser?.Id;
+            user.RejectedDate = DateTime.UtcNow;
+
+            var result = await UserManager.UpdateAsync(user);
+
+            if (result.Succeeded)
+            {
+                statusMessage = $"Rejected {user.Email}";
+                Logger.LogInformation("Manager {ManagerId} rejected user {UserId}", currentUser?.Id, userId);
+
+                await LoadPendingUsers();
+            }
+            else
+            {
+                statusMessage = $"Error: {string.Join(", ", result.Errors.Select(e => e.Description))}";
+            }
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Error: {ex.Message}";
+            Logger.LogError(ex, "Error rejecting user {UserId}", userId);
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    #endregion
+}

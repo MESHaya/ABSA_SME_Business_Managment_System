@@ -1,34 +1,43 @@
 ﻿@page "/employee/profile"
 @using System.ComponentModel.DataAnnotations
+@inject NavigationManager NavigationManager
 
 <h3>Employee Profile</h3>
 
-<div class="card p-3" style="max-width: 600px;">
+<div class="card p-4 shadow-sm" style="max-width: 600px;">
     <EditForm Model="@employeeProfile" OnValidSubmit="HandleValidSubmit">
         <DataAnnotationsValidator />
         <ValidationSummary />
 
         <div class="mb-3">
-            <label>Full Name</label>
+            <label class="form-label">Full Name</label>
             <InputText @bind-Value="employeeProfile.FullName" class="form-control" />
         </div>
 
         <div class="mb-3">
-            <label>Email</label>
+            <label class="form-label">Email</label>
             <InputText @bind-Value="employeeProfile.Email" class="form-control" />
         </div>
 
         <div class="mb-3">
-            <label>Phone</label>
+            <label class="form-label">Phone</label>
             <InputText @bind-Value="employeeProfile.Phone" class="form-control" />
         </div>
 
         <div class="mb-3">
-            <label>Department</label>
+            <label class="form-label">Department</label>
             <InputText @bind-Value="employeeProfile.Department" class="form-control" />
         </div>
 
-        <button type="submit" class="btn btn-primary">Update Profile</button>
+        <div class="d-flex justify-content-between mt-4">
+            <button type="submit" class="btn btn-primary px-4">Update Profile</button>
+
+            <!-- Navigation Buttons -->
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-secondary" @onclick="GoToTimesheets">Timesheets</button>
+                <button type="button" class="btn btn-outline-success" @onclick="GoToLeaveRequests">Leave Requests</button>
+            </div>
+        </div>
     </EditForm>
 
     @if (submitted)
@@ -54,6 +63,16 @@
     {
         // TODO: Save updates to DB/service later
         submitted = true;
+    }
+
+    private void GoToTimesheets()
+    {
+        NavigationManager.NavigateTo("/employee/timesheets");
+    }
+
+    private void GoToLeaveRequests()
+    {
+        NavigationManager.NavigateTo("/employee/leave-requests");
     }
 
     public class EmployeeProfile

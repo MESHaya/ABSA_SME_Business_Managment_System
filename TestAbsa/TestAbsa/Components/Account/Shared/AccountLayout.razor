@@ -1,5 +1,7 @@
-﻿@inherits LayoutComponentBase
-@layout TestAbsa.Components.Layout.MainLayout
+﻿@* Save this as: Components/Layout/Account.razor *@
+@* This replaces your current Account.razor file *@
+
+@inherits LayoutComponentBase
 @inject NavigationManager NavigationManager
 
 @if (HttpContext is null)
@@ -8,8 +10,27 @@
 }
 else
 {
-    @Body
+    <link href="app.css" rel="stylesheet" />
+    <div class="auth-layout-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1 class="auth-brand">TestAbsa SME Portal</h1>
+                <p class="auth-tagline">Manage your business with confidence</p>
+            </div>
+            
+            <div class="auth-body">
+                @Body
+            </div>
+            
+            <div class="auth-footer">
+                <p>&copy; @DateTime.Now.Year TestAbsa. All rights reserved.</p>
+            </div>
+        </div>
+    </div>
 }
+
+
+
 
 @code {
     [CascadingParameter]
@@ -19,9 +40,6 @@ else
     {
         if (HttpContext is null)
         {
-            // If this code runs, we're currently rendering in interactive mode, so there is no HttpContext.
-            // The identity pages need to set cookies, so they require an HttpContext. To achieve this we
-            // must transition back from interactive mode to a server-rendered page.
             NavigationManager.Refresh(forceReload: true);
         }
     }

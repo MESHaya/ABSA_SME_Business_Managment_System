@@ -8,6 +8,7 @@
 @using TestAbsa.Data
 @implements IDisposable
 
+
 <div class="top-navbar">
     <div class="navbar-brand">
         <a href="/" class="brand-link">TestAbsa SME Portal</a>
@@ -27,12 +28,10 @@
                     <a href="/manager/inventory/dashboard" class="nav-link">
                         <span class="bi bi-box-seam"></span> Inventory
                     </a>
-                    <a href="/manager/pendingusers" class="nav-link">
-                        <span class="bi bi-person-check"></span> Pending Users
-                        @if (pendingUserCount > 0)
-                        {
-                            <span class="badge bg-danger ms-1">@pendingUserCount</span>
-                        }
+                
+
+                    <a href="/manager/hr/dashboard" class="nav-link">
+                        <span class="bi bi-currency-dollar"></span> HR
                     </a>
 
                     <a href="/manager/finance/dashboard" class="nav-link">

@@ -1,0 +1,110 @@
+﻿@page "/manager/hr/user-management"
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using TestAbsa.Data.Models
+@using TestAbsa.Data
+@rendermode InteractiveServer
+@inject UserManager<ApplicationUser> UserManager
+@inject IDbContextFactory<ApplicationDbContext> DbContextFactory
+@inject ILogger<UserManagementSection> Logger
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<h3>User Management</h3>
+
+@if (isLoading)
+{
+    <p><em>Loading users...</em></p>
+}
+else
+{
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>Email</th>
+                <th>Status</th>
+                <th>Manager</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var user in currentUsers)
+            {
+                <tr>
+                    <td>@user.Email</td>
+                    <td>@(user.IsApproved ? "Approved" : user.IsRejected ? "Rejected" : "Pending")</td>
+                    <td>@GetManagerEmail(user)</td>
+                    <td>
+                        @if (!user.IsApproved && !user.IsRejected)
+                        {
+                            <button class="btn btn-success btn-sm me-1" @onclick="() => ApproveUser(user.Id)">Approve</button>
+                            <button class="btn btn-danger btn-sm" @onclick="() => RejectUser(user.Id)">Reject</button>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private enum UserViewType { Pending, Approved, Rejected }
+
+    private List<ApplicationUser> currentUsers = new();
+    private Dictionary<string, string> managerEmails = new();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ToggleUserView(UserViewType.Pending);
+        isLoading = false;
+    }
+
+    private async Task ToggleUserView(UserViewType view)
+    {
+        using var context = await DbContextFactory.CreateDbContextAsync();
+        currentUsers = view switch
+        {
+            UserViewType.Approved => await context.Users.Where(u => u.IsApproved).ToListAsync(),
+            UserViewType.Rejected => await context.Users.Where(u => u.IsRejected).ToListAsync(),
+            _ => await context.Users.Where(u => !u.IsApproved && !u.IsRejected).ToListAsync()
+        };
+    }
+
+    private string GetManagerEmail(ApplicationUser user)
+    {
+        if (string.IsNullOrEmpty(user.ApprovedByManagerId) && string.IsNullOrEmpty(user.RejectedByManagerId))
+            return "N/A";
+        var id = user.ApprovedByManagerId ?? user.RejectedByManagerId!;
+        return managerEmails.TryGetValue(id, out var email) ? email : "Unknown";
+    }
+
+    private async Task ApproveUser(string id)
+    {
+        var auth = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var manager = await UserManager.GetUserAsync(auth.User);
+
+        var user = await UserManager.FindByIdAsync(id);
+        if (user == null) return;
+
+        user.IsApproved = true;
+        user.ApprovedByManagerId = manager?.Id;
+        user.ApprovedDate = DateTime.UtcNow;
+        await UserManager.UpdateAsync(user);
+        await ToggleUserView(UserViewType.Pending);
+    }
+
+    private async Task RejectUser(string id)
+    {
+        var auth = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var manager = await UserManager.GetUserAsync(auth.User);
+
+        var user = await UserManager.FindByIdAsync(id);
+        if (user == null) return;
+
+        user.IsRejected = true;
+        user.RejectedByManagerId = manager?.Id;
+        user.RejectedDate = DateTime.UtcNow;
+        await UserManager.UpdateAsync(user);
+        await ToggleUserView(UserViewType.Pending);
+    }
+}

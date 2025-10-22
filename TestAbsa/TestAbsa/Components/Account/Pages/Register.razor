@@ -30,6 +30,13 @@
             <ValidationSummary class="text-danger" role="alert" />
 
             <div class="form-floating mb-3">
+    <InputText @bind-Value="Input.FullName" class="form-control" autocomplete="name" aria-required="true" placeholder="John Doe" />
+    <label for="full-name">Full Name</label>
+    <ValidationMessage For="() => Input.FullName" class="text-danger" />
+</div>
+
+
+            <div class="form-floating mb-3">
                 <InputText @bind-Value="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
                 <label for="email">Email</label>
                 <ValidationMessage For="() => Input.Email" class="text-danger" />
@@ -86,71 +93,77 @@
 
     private string? Message => identityErrors is null ? null : $"Error: {string.Join(", ", identityErrors.Select(error => error.Description))}";
 
-    public async Task RegisterUser(EditContext editContext)
+   public async Task RegisterUser(EditContext editContext)
+{
+    var user = CreateUser();
+
+    // Set full name, role, and registration date
+    user.FullName = Input.FullName;
+    user.UserRole = Input.Role;
+    user.RegistrationDate = DateTime.UtcNow;
+
+    // Managers are auto-approved, employees need approval
+    if (Input.Role == "Manager")
     {
-        var user = CreateUser();
-
-        // Set role and approval status
-        user.UserRole = Input.Role;
-        user.RegistrationDate = DateTime.UtcNow;
-
-        // Managers are auto-approved, employees need approval
-        if (Input.Role == "Manager")
-        {
-            user.IsApproved = true;
-            user.ApprovedDate = DateTime.UtcNow;
-        }
-        else
-        {
-            user.IsApproved = false;
-        }
-
-        await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
-        var emailStore = GetEmailStore();
-        await emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
-        var result = await UserManager.CreateAsync(user, Input.Password);
-
-        if (!result.Succeeded)
-        {
-            identityErrors = result.Errors;
-            return;
-        }
-
-        Logger.LogInformation("User created a new account with password. Role: {Role}", Input.Role);
-
-        // Add user to role
-        await UserManager.AddToRoleAsync(user, Input.Role);
-
-        var userId = await UserManager.GetUserIdAsync(user);
-        var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
-        code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-        var callbackUrl = NavigationManager.GetUriWithQueryParameters(
-            NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
-            new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = ReturnUrl });
-
-        await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
-
-        // Different flow for managers vs employees
-        if (Input.Role == "Manager")
-        {
-            if (UserManager.Options.SignIn.RequireConfirmedAccount)
-            {
-                RedirectManager.RedirectTo(
-                    "Account/RegisterConfirmation",
-                    new() { ["email"] = Input.Email, ["returnUrl"] = ReturnUrl });
-            }
-
-            await SignInManager.SignInAsync(user, isPersistent: false);
-            RedirectManager.RedirectTo(ReturnUrl);
-        }
-        else
-        {
-            // Employee - show pending approval message
-            RedirectManager.RedirectTo(
-                "Account/RegistrationPending",
-                new() { ["email"] = Input.Email });
-        }
+        user.IsApproved = true;
+        user.ApprovedDate = DateTime.UtcNow;
     }
+    else
+    {
+        user.IsApproved = false;
+    }
+
+    // ✅ Set username as FullName instead of Email
+    await UserStore.SetUserNameAsync(user, Input.FullName, CancellationToken.None);
+
+    // ✅ Still store their email separately
+    var emailStore = GetEmailStore();
+    await emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
+
+    // ✅ Create user in Identity
+    var result = await UserManager.CreateAsync(user, Input.Password);
+
+    if (!result.Succeeded)
+    {
+        identityErrors = result.Errors;
+        return;
+    }
+
+    Logger.LogInformation("User created a new account with password. Role: {Role}", Input.Role);
+
+    // ✅ Add to role
+    await UserManager.AddToRoleAsync(user, Input.Role);
+
+    // ✅ Email confirmation setup
+    var userId = await UserManager.GetUserIdAsync(user);
+    var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
+    code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+    var callbackUrl = NavigationManager.GetUriWithQueryParameters(
+        NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
+        new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = ReturnUrl });
+
+    await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
+
+    // ✅ Handle post-registration flow
+    if (Input.Role == "Manager")
+    {
+        if (UserManager.Options.SignIn.RequireConfirmedAccount)
+        {
+            RedirectManager.RedirectTo(
+                "Account/RegisterConfirmation",
+                new() { ["email"] = Input.Email, ["returnUrl"] = ReturnUrl });
+        }
+
+        await SignInManager.SignInAsync(user, isPersistent: false);
+        RedirectManager.RedirectTo(ReturnUrl);
+    }
+    else
+    {
+        RedirectManager.RedirectTo(
+            "Account/RegistrationPending",
+            new() { ["email"] = Input.Email });
+    }
+}
 
     private ApplicationUser CreateUser()
     {
@@ -176,6 +189,11 @@
 
     private sealed class InputModel
     {
+        [Required]
+    [Display(Name = "Full Name")]
+    public string FullName { get; set; } = "";
+
+
         [Required]
         [EmailAddress]
         [Display(Name = "Email")]

@@ -1787,11 +1787,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\munnh\\TEST_DB\\TestAbsa\\TestAbsa.Client\\TestAbsa.Client.csproj",
+      "projectUniqueName": "C:\\Users\\munnh\\source\\repos\\TEST_DB\\TestAbsa\\TestAbsa.Client\\TestAbsa.Client.csproj",
       "projectName": "TestAbsa.Client",
-      "projectPath": "C:\\Users\\munnh\\TEST_DB\\TestAbsa\\TestAbsa.Client\\TestAbsa.Client.csproj",
+      "projectPath": "C:\\Users\\munnh\\source\\repos\\TEST_DB\\TestAbsa\\TestAbsa.Client\\TestAbsa.Client.csproj",
       "packagesPath": "C:\\Users\\munnh\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\munnh\\TEST_DB\\TestAbsa\\TestAbsa.Client\\obj\\",
+      "outputPath": "C:\\Users\\munnh\\source\\repos\\TEST_DB\\TestAbsa\\TestAbsa.Client\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

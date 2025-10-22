@@ -1,27 +1,27 @@
-﻿using Microsoft.EntityFrameworkCore;
-using TestAbsa.Data.Models; // Ensure this is the correct namespace for your models
-using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using TestAbsa.Data;
+using TestAbsa.Data.Models;
 
 namespace TestAbsa.Services
 {
     public class InventoryService : IInventoryService
     {
-        // Must use 'ApplicationDbContext' from 'SmeApp.Data' namespace
-        private readonly ApplicationDbContext _context;
+        private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
 
-        public InventoryService(ApplicationDbContext context)
+        public InventoryService(IDbContextFactory<ApplicationDbContext> contextFactory)
         {
-            _context = context;
+            _contextFactory = contextFactory;
         }
 
         // --- Product Management ---
 
         public async Task<List<Product>> GetAllProductsAsync(bool includeSuppliers = true)
         {
-            var query = _context.Products.AsQueryable();
+            using var context = await _contextFactory.CreateDbContextAsync();
+            var query = context.Products.AsQueryable();
 
             if (includeSuppliers)
             {
@@ -41,10 +41,10 @@ namespace TestAbsa.Services
             return products;
         }
 
-
         public async Task<Product?> GetProductByIdAsync(int id)
         {
-            var product = await _context.Products
+            using var context = await _contextFactory.CreateDbContextAsync();
+            var product = await context.Products
                 .Include(p => p.Supplier)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
@@ -61,44 +61,47 @@ namespace TestAbsa.Services
             return product;
         }
 
-
         public async Task AddProductAsync(Product product)
         {
-            _context.Products.Add(product);
-            await _context.SaveChangesAsync();
+            using var context = await _contextFactory.CreateDbContextAsync();
+            context.Products.Add(product);
+            await context.SaveChangesAsync();
         }
 
         public async Task UpdateProductAsync(Product product)
         {
-            _context.Products.Update(product);
-            await _context.SaveChangesAsync();
+            using var context = await _contextFactory.CreateDbContextAsync();
+            context.Products.Update(product);
+            await context.SaveChangesAsync();
         }
 
         // --- Supplier Management ---
 
         public async Task<List<Supplier>> GetAllSuppliersAsync()
         {
-            return await _context.Suppliers.ToListAsync();
+            using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Suppliers.ToListAsync();
         }
 
         public async Task AddSupplierAsync(Supplier supplier)
         {
-            _context.Suppliers.Add(supplier);
-            await _context.SaveChangesAsync();
+            using var context = await _contextFactory.CreateDbContextAsync();
+            context.Suppliers.Add(supplier);
+            await context.SaveChangesAsync();
         }
 
         // --- Stock Request Management ---
-
 
         public async Task AddStockRequestAsync(StockRequest request)
         {
             try
             {
+                using var context = await _contextFactory.CreateDbContextAsync();
                 request.RequestDate = DateTime.UtcNow;
                 request.Status = "Pending";
 
-                _context.StockRequests.Add(request);
-                await _context.SaveChangesAsync();
+                context.StockRequests.Add(request);
+                await context.SaveChangesAsync();
             }
             catch (Exception ex)
             {
@@ -108,7 +111,8 @@ namespace TestAbsa.Services
 
         public async Task<List<StockRequest>> GetPendingStockRequestsAsync()
         {
-            return await _context.StockRequests
+            using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.StockRequests
                 .Where(r => r.Status == "Pending")
                 .Include(r => r.Product)
                 .OrderBy(r => r.RequestDate)
@@ -117,16 +121,27 @@ namespace TestAbsa.Services
 
         public async Task<List<StockRequest>> GetAllStockRequestsAsync()
         {
-            return await _context.StockRequests
-                .Include(r => r.Product) // include related product info
+            using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.StockRequests
+                .Include(r => r.Product)
                 .OrderByDescending(r => r.RequestDate)
                 .ToListAsync();
         }
 
+        public async Task<List<StockRequest>> GetStockRequestsByEmployeeAsync(string employeeId)
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.StockRequests
+                .Include(r => r.Product)
+                .Where(r => r.EmployeeId == employeeId)
+                .OrderByDescending(r => r.RequestDate)
+                .ToListAsync();
+        }
 
         public async Task<bool> ReviewStockRequestAsync(int requestId, string status, string managerId, string managerName)
         {
-            var request = await _context.StockRequests
+            using var context = await _contextFactory.CreateDbContextAsync();
+            var request = await context.StockRequests
                 .Include(r => r.Product)
                 .FirstOrDefaultAsync(r => r.Id == requestId);
 
@@ -144,11 +159,174 @@ namespace TestAbsa.Services
             {
                 // Increase the product's inventory (CurrentStock)
                 request.Product.CurrentStock += request.Quantity;
-                _context.Products.Update(request.Product);
+                context.Products.Update(request.Product);
             }
 
-            _context.StockRequests.Update(request);
-            await _context.SaveChangesAsync();
+            context.StockRequests.Update(request);
+            await context.SaveChangesAsync();
+            return true;
+        }
+
+        // --- Purchase Order Management ---
+
+        public async Task<int> CreatePurchaseOrderAsync(PurchaseOrder purchaseOrder)
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+            // Auto-calculate total cost
+            purchaseOrder.TotalCost = purchaseOrder.OrderedQuantity * purchaseOrder.UnitCost;
+            purchaseOrder.OrderDate = DateTime.UtcNow;
+            purchaseOrder.Status = "Ordered";
+
+            context.PurchaseOrders.Add(purchaseOrder);
+            await context.SaveChangesAsync();
+            return purchaseOrder.Id;
+        }
+
+        public async Task<List<PurchaseOrder>> GetAllPurchaseOrdersAsync()
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.PurchaseOrders
+                .Include(p => p.Supplier)
+                .Include(p => p.Product)
+                .OrderByDescending(p => p.OrderDate)
+                .ToListAsync();
+        }
+
+        public async Task<PurchaseOrder?> GetPurchaseOrderByIdAsync(int id)
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.PurchaseOrders
+                .Include(p => p.Supplier)
+                .Include(p => p.Product)
+                .FirstOrDefaultAsync(p => p.Id == id);
+        }
+
+        public async Task<List<PurchaseOrder>> GetPurchaseOrdersByStatusAsync(string status)
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.PurchaseOrders
+                .Where(p => p.Status == status)
+                .Include(p => p.Supplier)
+                .Include(p => p.Product)
+                .ToListAsync();
+        }
+
+        public async Task<List<PurchaseOrder>> GetPendingPurchaseOrdersAsync()
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.PurchaseOrders
+                .Where(p => p.Status == "Ordered" || p.Status == "Shipped")
+                .Include(p => p.Supplier)
+                .Include(p => p.Product)
+                .ToListAsync();
+        }
+
+        public async Task<bool> UpdatePurchaseOrderStatusAsync(int id, string newStatus, DateTime? statusDate = null)
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+            var order = await context.PurchaseOrders.FindAsync(id);
+            if (order == null)
+                return false;
+
+            order.Status = newStatus;
+
+            // Update relevant date fields based on status
+            switch (newStatus)
+            {
+                case "Shipped":
+                    order.ShippedDate = statusDate ?? DateTime.UtcNow;
+                    break;
+                case "Delivered":
+                    order.DeliveredDate = statusDate ?? DateTime.UtcNow;
+                    break;
+                case "Cancelled":
+                    // No special date field for cancel, but could add one if needed
+                    break;
+            }
+
+            context.PurchaseOrders.Update(order);
+            await context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> MarkAsShippedAsync(int id, DateTime shippedDate)
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+            var order = await context.PurchaseOrders.FindAsync(id);
+            if (order == null)
+                return false;
+
+            order.Status = "Shipped";
+            order.ShippedDate = shippedDate;
+
+            context.PurchaseOrders.Update(order);
+            await context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> ReceiveStockAsync(int id, int receivedQuantity, string managerId, string managerName)
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+            var order = await context.PurchaseOrders
+                .Include(p => p.Product)
+                .FirstOrDefaultAsync(p => p.Id == id);
+
+            if (order == null)
+                return false;
+
+            order.ReceivedQuantity += receivedQuantity;
+
+            // Update product stock
+            if (order.Product != null)
+            {
+                order.Product.CurrentStock += receivedQuantity;
+                context.Products.Update(order.Product);
+            }
+
+            // Determine new status
+            if (order.ReceivedQuantity >= order.OrderedQuantity)
+            {
+                order.Status = "Delivered";
+                order.DeliveredDate = DateTime.UtcNow;
+            }
+            else
+            {
+                order.Status = "PartiallyReceived";
+            }
+
+            context.PurchaseOrders.Update(order);
+            await context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> ReportIssueAsync(int id, string issueNotes, string managerId)
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+            var order = await context.PurchaseOrders.FindAsync(id);
+            if (order == null)
+                return false;
+
+            order.Status = "Issue";
+            order.IssueNotes = issueNotes;
+            order.IssueReportedDate = DateTime.UtcNow;
+
+            context.PurchaseOrders.Update(order);
+            await context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> CancelPurchaseOrderAsync(int id, string reason)
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+            var order = await context.PurchaseOrders.FindAsync(id);
+            if (order == null)
+                return false;
+
+            order.Status = "Cancelled";
+            order.Notes = $"Cancelled: {reason}";
+
+            context.PurchaseOrders.Update(order);
+            await context.SaveChangesAsync();
             return true;
         }
     }

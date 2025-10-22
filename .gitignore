@@ -1,0 +1,9 @@
+﻿.vs/
+bin/
+obj/
+*.vsidx
+*.db-shm
+*.db-wal
+*.user
+*.suo
+.vscode/

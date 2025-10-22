@@ -1,5 +1,7 @@
 ﻿@page "/employee/stock-requests"
 @inject IInventoryService InventoryService
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthenticationStateProvider
+
 
 @using TestAbsa.Data.Models
 
@@ -77,20 +79,32 @@
     private List<StockRequest> StockRequests = new();
     private bool IsLoading = true;
 
-    protected override async Task OnInitializedAsync()
+ protected override async Task OnInitializedAsync()
+{
+    try
     {
-        try
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity is not null && user.Identity.IsAuthenticated)
         {
-            StockRequests = await InventoryService.GetAllStockRequestsAsync();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error loading stock requests: {ex.Message}");
-            StockRequests = new List<StockRequest>();
-        }
-        finally
-        {
-            IsLoading = false;
+            var employeeId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+            if (!string.IsNullOrEmpty(employeeId))
+            {
+                StockRequests = await InventoryService.GetStockRequestsByEmployeeAsync(employeeId);
+            }
         }
     }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error loading stock requests: {ex.Message}");
+        StockRequests = new List<StockRequest>();
+    }
+    finally
+    {
+        IsLoading = false;
+    }
+}
+
 }
