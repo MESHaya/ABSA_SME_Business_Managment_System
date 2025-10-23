@@ -272,3 +272,9 @@ C:\Users\munnh\source\repos\TEST_DB\TestAbsa\TestAbsa.Client\obj\Debug\net8.0\st
 C:\Users\munnh\source\repos\TEST_DB\TestAbsa\TestAbsa.Client\obj\Debug\net8.0\staticwebassets.build.json
 C:\Users\munnh\source\repos\TEST_DB\TestAbsa\TestAbsa.Client\obj\Debug\net8.0\staticwebassets.build.json
 C:\Users\munnh\source\repos\TEST_DB\TestAbsa\TestAbsa.Client\obj\Debug\net8.0\staticwebassets.build.json
+C:\Users\USER-PC\Desktop\WI\ABSA_SME_Business_Managment_System\TestAbsa\TestAbsa.Client\obj\Debug\net8.0\staticwebassets.build.json
+C:\Users\USER-PC\Desktop\WI\ABSA_SME_Business_Managment_System\TestAbsa\TestAbsa.Client\obj\Debug\net8.0\staticwebassets.build.json
+C:\Users\USER-PC\Desktop\WI\ABSA_SME_Business_Managment_System\TestAbsa\TestAbsa.Client\obj\Debug\net8.0\staticwebassets.build.json
+C:\Users\USER-PC\Desktop\WI\ABSA_SME_Business_Managment_System\TestAbsa\TestAbsa.Client\obj\Debug\net8.0\staticwebassets.build.json
+C:\Users\USER-PC\Desktop\WI\ABSA_SME_Business_Managment_System\TestAbsa\TestAbsa.Client\obj\Debug\net8.0\staticwebassets.build.json
+C:\Users\USER-PC\Desktop\WI\ABSA_SME_Business_Managment_System\TestAbsa\TestAbsa.Client\obj\Debug\net8.0\staticwebassets.build.json

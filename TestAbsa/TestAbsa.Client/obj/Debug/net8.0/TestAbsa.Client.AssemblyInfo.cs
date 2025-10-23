@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("TestAbsa.Client")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c3f3684065dab19a2ec6a7514a19c41a76e5037c")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b7064f03fb51b6528ea721f31050a64318d4772f")]
 [assembly: System.Reflection.AssemblyProductAttribute("TestAbsa.Client")]
 [assembly: System.Reflection.AssemblyTitleAttribute("TestAbsa.Client")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
