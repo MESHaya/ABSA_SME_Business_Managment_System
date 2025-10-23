@@ -278,3 +278,4 @@ C:\Users\USER-PC\Desktop\WI\ABSA_SME_Business_Managment_System\TestAbsa\TestAbsa
 C:\Users\USER-PC\Desktop\WI\ABSA_SME_Business_Managment_System\TestAbsa\TestAbsa.Client\obj\Debug\net8.0\staticwebassets.build.json
 C:\Users\USER-PC\Desktop\WI\ABSA_SME_Business_Managment_System\TestAbsa\TestAbsa.Client\obj\Debug\net8.0\staticwebassets.build.json
 C:\Users\USER-PC\Desktop\WI\ABSA_SME_Business_Managment_System\TestAbsa\TestAbsa.Client\obj\Debug\net8.0\staticwebassets.build.json
+C:\Users\USER-PC\Desktop\WI\ABSA_SME_Business_Managment_System\TestAbsa\TestAbsa.Client\obj\Debug\net8.0\staticwebassets.build.json
