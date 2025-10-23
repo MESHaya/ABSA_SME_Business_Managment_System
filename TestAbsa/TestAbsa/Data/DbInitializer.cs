@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using TestAbsa.Data;
+using TestAbsa.Data.Models;
 
 namespace TestAbsa.Data
 {
@@ -32,6 +34,18 @@ namespace TestAbsa.Data
                 }
             }
 
+            var context = serviceProvider.GetRequiredService<ApplicationDbContext>();
+
+            // 1. Create a default organization if none exists
+            var defaultOrg = await context.Organizations.FirstOrDefaultAsync(o => o.Name == "Default Absa SME Client");
+            if (defaultOrg == null)
+            {
+                defaultOrg = new Organization { Name = "Default Absa SME Client" };
+                context.Organizations.Add(defaultOrg);
+                await context.SaveChangesAsync();
+                logger.LogInformation("Default organization created.");
+            }
+
             // Create initial admin/manager if it doesn't exist
             var adminEmail = "admin@testabsa.com";
             var adminUser = await userManager.FindByEmailAsync(adminEmail);
@@ -46,7 +60,9 @@ namespace TestAbsa.Data
                     UserRole = "Manager",
                     IsApproved = true,
                     ApprovedDate = DateTime.UtcNow,
-                    RegistrationDate = DateTime.UtcNow
+                    RegistrationDate = DateTime.UtcNow,
+                    //  Links Admin to the Default Organization --- should we have it as a default or should we have a unique one?
+                     OrganizationId = defaultOrg.Id // Link to the newly created/found organization
                 };
 
                 string adminPassword = "Admin@123"; // Change this to a secure password

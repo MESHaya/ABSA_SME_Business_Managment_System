@@ -27,6 +27,11 @@ namespace TestAbsa.Data.Models
         // Foreign Key to Supplier
         public int? SupplierId { get; set; }
         public Supplier? Supplier { get; set; }
+
+        // --- Organization Fields ---
+        [Required]
+        public int OrganizationId { get; set; }
+        public Organization Organization { get; set; } = null!; // Navigation property
     }
 
     // --- Supplier Model ---
@@ -42,8 +47,15 @@ namespace TestAbsa.Data.Models
         [EmailAddress, StringLength(100)]
         public string Email { get; set; } = string.Empty;
         [StringLength(250)]
-        public string Address { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;        
+
+        [Required]
+        public int OrganizationId { get; set; }
+        public Organization Organization { get; set; } = null!; // Navigation property
+
+        // Update the collection to link back to the organization
         public List<Product> Products { get; set; } = new List<Product>(); // Navigation property
+
     }
 
     // --- Stock Request Model ---
@@ -69,6 +81,10 @@ namespace TestAbsa.Data.Models
         public string? ManagerId { get; set; } // Nullable, set upon review
         public string? ManagerName { get; set; } // Nullable, set upon review
         public DateTime? ReviewDate { get; set; }
+        // --- Organization Fields ---
+        [Required]
+        public int OrganizationId { get; set; }
+        public Organization Organization { get; set; } = null!; // Navigation property
     }
 
     // --- Purchase Order Model ---
@@ -142,5 +158,11 @@ namespace TestAbsa.Data.Models
 
         [NotMapped]
         public int RemainingQuantity => OrderedQuantity - ReceivedQuantity;
+
+        // --- Organization Fields ---
+        [Required]
+        public int OrganizationId { get; set; }
+        public Organization Organization { get; set; } = null!; // Navigation property
+
     }
 }

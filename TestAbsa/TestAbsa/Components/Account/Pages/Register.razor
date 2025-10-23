@@ -5,8 +5,11 @@
 @using System.Text.Encodings.Web
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.WebUtilities
+@using Microsoft.EntityFrameworkCore
 @using TestAbsa.Data
+@using TestAbsa.Data.Models
 
+@inject TestAbsa.Data.ApplicationDbContext Context
 @inject UserManager<ApplicationUser> UserManager
 @inject RoleManager<IdentityRole> RoleManager
 @inject IUserStore<ApplicationUser> UserStore
@@ -30,11 +33,26 @@
             <ValidationSummary class="text-danger" role="alert" />
 
             <div class="form-floating mb-3">
-    <InputText @bind-Value="Input.FullName" class="form-control" autocomplete="name" aria-required="true" placeholder="John Doe" />
-    <label for="full-name">Full Name</label>
-    <ValidationMessage For="() => Input.FullName" class="text-danger" />
-</div>
+                <InputText @bind-Value="Input.FullName" class="form-control" autocomplete="name" aria-required="true" placeholder="John Doe" />
+                <label for="full-name">Full Name</label>
+                <ValidationMessage For="() => Input.FullName" class="text-danger" />
+            </div>
 
+            <div class="form-floating mb-3">
+                <InputSelect @bind-Value="Input.SelectedOrganizationId" class="form-select" aria-required="true">
+                    <option value="0">-- Select Existing Organization --</option>
+                    @foreach (var org in Organizations)
+                    {
+                        <option value="@org.Id">@org.Name</option>
+                    }
+                </InputSelect>
+                <label for="organization-id">Organization</label>
+                <ValidationMessage For="() => Input.SelectedOrganizationId" class="text-danger" />
+                @if (Organizations.Count == 0)
+                {
+                    <div class="text-danger mt-2">No organizations found. Please contact an administrator.</div>
+                }
+            </div>
 
             <div class="form-floating mb-3">
                 <InputText @bind-Value="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
@@ -70,7 +88,7 @@
                 </div>
             }
 
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
+            <button type="submit" class="w-100 btn btn-lg btn-primary" disabled="@(Organizations.Count == 0)">Register</button>
         </EditForm>
     </div>
     <div class="col-md-6 col-md-offset-2">
@@ -91,79 +109,99 @@
     [SupplyParameterFromQuery]
     private string? ReturnUrl { get; set; }
 
+    //  Property to hold the list of organizations for the dropdown
+    private List<Organization> Organizations { get; set; } = new List<Organization>();
+
     private string? Message => identityErrors is null ? null : $"Error: {string.Join(", ", identityErrors.Select(error => error.Description))}";
 
-   public async Task RegisterUser(EditContext editContext)
-{
-    var user = CreateUser();
-
-    // Set full name, role, and registration date
-    user.FullName = Input.FullName;
-    user.UserRole = Input.Role;
-    user.RegistrationDate = DateTime.UtcNow;
-
-    // Managers are auto-approved, employees need approval
-    if (Input.Role == "Manager")
+    //  Fetch organizations on component initialization
+    protected override async Task OnInitializedAsync()
     {
-        user.IsApproved = true;
-        user.ApprovedDate = DateTime.UtcNow;
-    }
-    else
-    {
-        user.IsApproved = false;
+        Organizations = await Context.Organizations.OrderBy(o => o.Name).ToListAsync();
     }
 
-    // ✅ Set username as FullName instead of Email
-    await UserStore.SetUserNameAsync(user, Input.FullName, CancellationToken.None);
-
-    // ✅ Still store their email separately
-    var emailStore = GetEmailStore();
-    await emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
-
-    // ✅ Create user in Identity
-    var result = await UserManager.CreateAsync(user, Input.Password);
-
-    if (!result.Succeeded)
+    public async Task RegisterUser(EditContext editContext)
     {
-        identityErrors = result.Errors;
-        return;
-    }
-
-    Logger.LogInformation("User created a new account with password. Role: {Role}", Input.Role);
-
-    // ✅ Add to role
-    await UserManager.AddToRoleAsync(user, Input.Role);
-
-    // ✅ Email confirmation setup
-    var userId = await UserManager.GetUserIdAsync(user);
-    var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
-    code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-    var callbackUrl = NavigationManager.GetUriWithQueryParameters(
-        NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
-        new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = ReturnUrl });
-
-    await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
-
-    // ✅ Handle post-registration flow
-    if (Input.Role == "Manager")
-    {
-        if (UserManager.Options.SignIn.RequireConfirmedAccount)
+        //  Validate and Parse Organization ID
+        if (!int.TryParse(Input.SelectedOrganizationId, out int orgId) || orgId <= 0)
         {
-            RedirectManager.RedirectTo(
-                "Account/RegisterConfirmation",
-                new() { ["email"] = Input.Email, ["returnUrl"] = ReturnUrl });
+            identityErrors = new[] { new IdentityError { Description = "Please select a valid organization." } };
+            return;
         }
 
-        await SignInManager.SignInAsync(user, isPersistent: false);
-        RedirectManager.RedirectTo(ReturnUrl);
+        //  Create ApplicationUser
+        var user = CreateUser();
+
+        //   Assign the selected Organization ID to the user
+        user.OrganizationId = orgId;
+
+        // Set full name, role, and registration date
+        user.FullName = Input.FullName;
+        user.UserRole = Input.Role;
+        user.RegistrationDate = DateTime.UtcNow;
+
+        // Managers are auto-approved, employees need approval
+        if (Input.Role == "Manager")
+        {
+            user.IsApproved = true;
+            user.ApprovedDate = DateTime.UtcNow;
+        }
+        else
+        {
+            user.IsApproved = false;
+        }
+
+        //  Set username
+        await UserStore.SetUserNameAsync(user, Input.FullName, CancellationToken.None);
+
+        //  Still store their email separately
+        var emailStore = GetEmailStore();
+        await emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
+
+        //  Create user in Identity
+        var result = await UserManager.CreateAsync(user, Input.Password);
+
+        if (!result.Succeeded)
+        {
+            identityErrors = result.Errors;
+            return;
+        }
+
+        Logger.LogInformation("User created a new account with password. Role: {Role}, Organization ID: {OrganizationId}", Input.Role, user.OrganizationId);
+
+        //  Add to role
+        await UserManager.AddToRoleAsync(user, Input.Role);
+
+        //  Email confirmation setup (same as before)
+        var userId = await UserManager.GetUserIdAsync(user);
+        var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
+        code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+        var callbackUrl = NavigationManager.GetUriWithQueryParameters(
+            NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
+            new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = ReturnUrl });
+
+        await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
+
+        // ✅ Handle post-registration flow
+        if (Input.Role == "Manager")
+        {
+            if (UserManager.Options.SignIn.RequireConfirmedAccount)
+            {
+                RedirectManager.RedirectTo(
+                    "Account/RegisterConfirmation",
+                    new() { ["email"] = Input.Email, ["returnUrl"] = ReturnUrl });
+            }
+
+            await SignInManager.SignInAsync(user, isPersistent: false);
+            RedirectManager.RedirectTo(ReturnUrl);
+        }
+        else
+        {
+            RedirectManager.RedirectTo(
+                "Account/RegistrationPending",
+                new() { ["email"] = Input.Email });
+        }
     }
-    else
-    {
-        RedirectManager.RedirectTo(
-            "Account/RegistrationPending",
-            new() { ["email"] = Input.Email });
-    }
-}
 
     private ApplicationUser CreateUser()
     {
@@ -190,8 +228,14 @@
     private sealed class InputModel
     {
         [Required]
-    [Display(Name = "Full Name")]
-    public string FullName { get; set; } = "";
+        [Display(Name = "Full Name")]
+        public string FullName { get; set; } = "";
+
+        // Added Field for the selected Organization ID (bound as a string from InputSelect)
+        [Required]
+        [Range(1, int.MaxValue, ErrorMessage = "Please select an existing organization.")]
+        [Display(Name = "Organization")]
+        public string SelectedOrganizationId { get; set; } = "0";
 
 
         [Required]

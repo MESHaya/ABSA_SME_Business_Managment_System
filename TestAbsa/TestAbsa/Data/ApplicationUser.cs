@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using TestAbsa.Data.Models;
 using TestAbsa.Data;
+using System.ComponentModel.DataAnnotations;
 
 namespace TestAbsa.Data
 {
@@ -29,7 +30,14 @@ namespace TestAbsa.Data
         // Navigation property for the manager who approved
         public virtual ApplicationUser? ApprovedByManager { get; set; }
 
-     
+        // --- Organization Fields ---
+        [Required] // Ensure every user must belong to an organization
+        public int OrganizationId { get; set; }
+        public Organization Organization { get; set; } = null!; // Navigation property
+
+        // --- Future Account Status Field ---
+        // Field for whether the user is still active or not
+        public bool IsActive { get; set; } = true;
     }
 
 }

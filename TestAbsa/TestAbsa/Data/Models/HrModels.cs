@@ -46,6 +46,10 @@ namespace TestAbsa.Data.Models
         // Navigation properties
         public ApplicationUser? Employee { get; set; }
         public ApplicationUser? Manager { get; set; }
+
+        [Required]
+        public int OrganizationId { get; set; }
+        public Organization Organization { get; set; } = null!; // Navigation property
     }
 
     // --- Timesheet Entry Model ---
@@ -94,6 +98,10 @@ namespace TestAbsa.Data.Models
         public string? RejectionReason { get; set; }
         public DateTime? RejectedDate { get; set; }
         public string? RejectedByManagerId { get; set; }
+
+        [Required]
+        public int OrganizationId { get; set; }
+        public Organization Organization { get; set; } = null!; // Navigation property
     }
 
     // --- Employee Performance Review Model ---
