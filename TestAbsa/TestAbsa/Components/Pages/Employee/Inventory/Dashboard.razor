@@ -30,6 +30,44 @@
     </div>
 
 
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 p-3 bg-light">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">Total Products</h6>
+                        <h4 class="fw-bold text-primary mb-0">@Products.Count</h4>
+                    </div>
+                    <i class="oi oi-box text-primary fs-3"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 p-3 bg-light">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">Low Stock Items</h6>
+                        <h4 class="fw-bold text-danger mb-0">@LowStockCount</h4>
+                    </div>
+                    <i class="oi oi-warning text-danger fs-3"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 p-3 bg-light">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">Total Suppliers</h6>
+                        <h4 class="fw-bold text-success mb-0">@DistinctSuppliers</h4>
+                    </div>
+                    <i class="oi oi-people text-success fs-3"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
     @if (IsLoading)
     {
         <div class="d-flex justify-content-center">
@@ -99,25 +137,37 @@
 </div>
 
 @code {
-    private List<Product> Products { get; set; } = new List<Product>();
+  private List<Product> Products { get; set; } = new();
     private bool IsLoading = true;
+    private int LowStockCount;
+    private int DistinctSuppliers;
 
+  
     protected override async Task OnInitializedAsync()
     {
         try
         {
+            IsLoading = true;
             Products = await InventoryService.GetAllProductsAsync();
+
+            LowStockCount = Products.Count(p => p.CurrentStock <= p.MinLevel);
+            DistinctSuppliers = Products
+                .Where(p => p.Supplier != null)
+                .Select(p => p.Supplier!.Name)
+                .Distinct()
+                .Count();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading products: {ex.Message}");
-            Products = new List<Product>();
+            Console.WriteLine($"Error loading inventory: {ex.Message}");
+            Products = new();
         }
         finally
         {
             IsLoading = false;
         }
     }
+
 
     private void EditProduct(int productId)
     {

@@ -188,6 +188,26 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFbXBsb3llZVxEYXNoYm9hcmQucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Users/munnh/source/repos/TEST_DB/TestAbsa/TestAbsa/Components/Pages/Employee/Finance/CreateInvoice.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFbXBsb3llZVxGaW5hbmNlXENyZWF0ZUludm9pY2UucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/source/repos/TEST_DB/TestAbsa/TestAbsa/Components/Pages/Employee/Finance/Dashboard.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFbXBsb3llZVxGaW5hbmNlXERhc2hib2FyZC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/source/repos/TEST_DB/TestAbsa/TestAbsa/Components/Pages/Employee/Finance/Expenses.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFbXBsb3llZVxGaW5hbmNlXEV4cGVuc2VzLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/source/repos/TEST_DB/TestAbsa/TestAbsa/Components/Pages/Employee/Finance/Invoices.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFbXBsb3llZVxGaW5hbmNlXEludm9pY2VzLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/source/repos/TEST_DB/TestAbsa/TestAbsa/Components/Pages/Employee/Finance/ManageCustomers.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFbXBsb3llZVxGaW5hbmNlXE1hbmFnZUN1c3RvbWVycy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Users/munnh/source/repos/TEST_DB/TestAbsa/TestAbsa/Components/Pages/Employee/HR/LeaveRequests.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFbXBsb3llZVxIUlxMZWF2ZVJlcXVlc3RzLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
@@ -230,6 +250,10 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/Users/munnh/source/repos/TEST_DB/TestAbsa/TestAbsa/Components/Pages/Manager/Dashboard.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xNYW5hZ2VyXERhc2hib2FyZC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/munnh/source/repos/TEST_DB/TestAbsa/TestAbsa/Components/Pages/Manager/Finance/Dashboard.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xNYW5hZ2VyXEZpbmFuY2VcRGFzaGJvYXJkLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/munnh/source/repos/TEST_DB/TestAbsa/TestAbsa/Components/Pages/Manager/HR/Dashboard.razor]

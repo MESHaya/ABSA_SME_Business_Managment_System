@@ -5,7 +5,9 @@
 @using TestAbsa.Data.Models
 
 <PageTitle>Edit Product</PageTitle>
-
+<NavLink class="btn btn-primary mt-3" href="/employee/inventory/dashboard">
+                ← 
+            </NavLink>
 <div class="card shadow-lg p-4 mx-auto my-5" style="max-width: 700px; border-radius: 0.75rem;">
     <h3 class="card-title text-primary mb-4 text-center fw-bold">Edit Product</h3>
 
@@ -88,9 +90,10 @@
                 <button type="submit" class="btn btn-success flex-fill">
                     <i class="oi oi-check me-1"></i> Save Changes
                 </button>
-                <button type="button" class="btn btn-secondary flex-fill" @onclick="CancelEdit">
-                    <i class="oi oi-x me-1"></i> Cancel
-                </button>
+                <NavLink href="/employee/inventory/dashboard" class="btn btn-secondary flex-fill text-center">
+    <i class="oi oi-x me-1"></i> Cancel
+</NavLink>
+
             </div>
         </EditForm>
     }
@@ -173,8 +176,5 @@
         }
     }
 
-    private void CancelEdit()
-    {
-        NavigationManager.NavigateTo("/employee/inventory/dashboard");
-    }
+
 }

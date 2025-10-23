@@ -4,8 +4,13 @@ using TestAbsa.Data.Models;
 
 namespace TestAbsa.Data
 {
-    public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : IdentityDbContext<ApplicationUser>(options)
+    public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+            : base(options)
+        {
+        }
+
         // Inventory Management DbSets
         public DbSet<Product> Products { get; set; }
         public DbSet<Supplier> Suppliers { get; set; }
@@ -15,6 +20,12 @@ namespace TestAbsa.Data
         // HR Management DbSets
         public DbSet<TimesheetEntry> TimesheetEntries { get; set; }
         public DbSet<LeaveRequest> LeaveRequests { get; set; }
+
+        // Finance Management DbSets
+        public DbSet<Customer> Customers { get; set; }
+        public DbSet<Invoice> Invoices { get; set; }
+        public DbSet<InvoiceItem> InvoiceItems { get; set; }
+        public DbSet<Expense> Expenses { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -83,6 +94,65 @@ namespace TestAbsa.Data
                 .WithMany()
                 .HasForeignKey(l => l.ManagerId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // --- Customer Configuration ---
+            builder.Entity<Customer>()
+                .Property(c => c.Name)
+                .IsRequired()
+                .HasMaxLength(200);
+
+            builder.Entity<Customer>()
+                .Property(c => c.Email)
+                .IsRequired()
+                .HasMaxLength(200);
+
+            builder.Entity<Customer>()
+                .HasIndex(c => c.Email)
+                .IsUnique();
+
+            // --- Invoice Configuration ---
+            builder.Entity<Invoice>()
+                .Property(i => i.InvoiceNumber)
+                .IsRequired()
+                .HasMaxLength(50);
+
+            builder.Entity<Invoice>()
+                .HasIndex(i => i.InvoiceNumber)
+                .IsUnique();
+
+            builder.Entity<Invoice>()
+                .Property(i => i.Amount)
+                .HasColumnType("decimal(18,2)");
+
+            builder.Entity<Invoice>()
+                .HasOne(i => i.Customer)
+                .WithMany(c => c.Invoices)
+                .HasForeignKey(i => i.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // --- InvoiceItem Configuration ---
+            builder.Entity<InvoiceItem>()
+                .Property(ii => ii.UnitPrice)
+                .HasColumnType("decimal(18,2)");
+
+            // Total is now computed, so don't configure it for the database
+            // builder.Entity<InvoiceItem>().Ignore(ii => ii.Total); // Optional: explicitly ignore
+
+            builder.Entity<InvoiceItem>()
+                .HasOne(ii => ii.Invoice)
+                .WithMany(i => i.InvoiceItems)
+                .HasForeignKey(ii => ii.InvoiceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // --- Expense Configuration ---
+            builder.Entity<Expense>()
+                .Property(e => e.Amount)
+                .HasColumnType("decimal(18,2)");
+
+            builder.Entity<Expense>()
+                .Property(e => e.Description)
+                .IsRequired()
+                .HasMaxLength(500);
         }
     }
 }

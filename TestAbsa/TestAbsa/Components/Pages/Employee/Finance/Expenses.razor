@@ -1,0 +1,446 @@
+﻿@page "/employee/finance/expenses"
+
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Mvc.IgnoreAntiforgeryToken]
+
+
+@using TestAbsa.Data.Models
+@using TestAbsa.Services
+@inject IFinanceService FinanceService
+@inject NavigationManager Navigation
+
+<PageTitle>Manage Expenses</PageTitle>
+
+<div class="container-fluid">
+    <!-- Header with Back Button -->
+    <div class="row mb-4">
+        <div class="col">
+            <NavLink class="btn btn-primary mt-3" href="/employee/finance/dashboard">
+                ← 
+            </NavLink>
+            <h2>Expense Management</h2>
+            <p class="text-muted">Submit and track your business expenses</p>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (errorMessage != null)
+    {
+        <div class="alert @(errorMessage.Contains("successfully") ? "alert-success" : "alert-danger") alert-dismissible fade show" role="alert">
+            @errorMessage
+            <button type="button" class="btn-close" @onclick="@(() => errorMessage = null)"></button>
+        </div>
+    }
+    else
+    {
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card bg-primary text-white">
+                    <div class="card-body">
+                        <h5 class="card-title">Total Expenses</h5>
+                        <h3>R @totalExpenses.ToString("N2")</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-warning text-white">
+                    <div class="card-body">
+                        <h5 class="card-title">Pending Approval</h5>
+                        <h3>@pendingExpenses.Count</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body">
+                        <h5 class="card-title">Approved</h5>
+                        <h3>@approvedExpenses.Count</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-info text-white">
+                    <div class="card-body">
+                        <h5 class="card-title">This Month</h5>
+                        <h3>R @monthlyExpenses.ToString("N2")</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Expense Form -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Add New Expense</h5>
+            </div>
+            <div class="card-body">
+                <EditForm Model="@newExpense" OnValidSubmit="@HandleAddExpense" FormName="ExpenseForm">
+                     <AntiforgeryToken />
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Description *</label>
+                            <InputText @bind-Value="newExpense.Description" 
+                                       @oninput="@(() => LogFieldChange("Description", newExpense.Description))"
+                                       class="form-control" />
+                            <ValidationMessage For="@(() => newExpense.Description)" />
+                        </div>
+
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Amount *</label>
+                            <InputNumber @bind-Value="newExpense.Amount" 
+                                         @oninput="@(() => LogFieldChange("Amount", newExpense.Amount.ToString()))"
+                                         class="form-control" />
+                            <ValidationMessage For="@(() => newExpense.Amount)" />
+                        </div>
+
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Category *</label>
+                            <InputSelect @bind-Value="newExpense.Category" 
+                                         @onchange="@(() => LogFieldChange("Category", newExpense.Category.ToString()))"
+                                         class="form-select">
+                                <option value="">-- Select Category --</option>
+                                @foreach (var category in Enum.GetValues<ExpenseCategory>())
+                                {
+                                    <option value="@category">@category</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="@(() => newExpense.Category)" />
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Vendor</label>
+                            <InputText @bind-Value="newExpense.Vendor" 
+                                       @oninput="@(() => LogFieldChange("Vendor", newExpense.Vendor))"
+                                       class="form-control" />
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Receipt Number</label>
+                            <InputText @bind-Value="newExpense.ReceiptNumber" 
+                                       @oninput="@(() => LogFieldChange("ReceiptNumber", newExpense.ReceiptNumber))"
+                                       class="form-control" />
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Submit Expense</button>
+                    <button type="button" class="btn btn-secondary ms-2" @onclick="ResetForm">Reset Form</button>
+                </EditForm>
+            </div>
+        </div>
+
+        
+
+        <!-- Expenses List -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5>My Expenses</h5>
+                <div>
+                    <button class="btn btn-sm @(currentFilter == null ? "btn-secondary" : "btn-outline-secondary")" 
+                            @onclick="@(() => FilterExpenses(null))">
+                        All (@allExpenses.Count)
+                    </button>
+                    <button class="btn btn-sm @(currentFilter == false ? "btn-warning" : "btn-outline-warning")" 
+                            @onclick="@(() => FilterExpenses(false))">
+                        Pending (@pendingExpenses.Count)
+                    </button>
+                    <button class="btn btn-sm @(currentFilter == true ? "btn-success" : "btn-outline-success")" 
+                            @onclick="@(() => FilterExpenses(true))">
+                        Approved (@approvedExpenses.Count)
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                @if (filteredExpenses.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Description</th>
+                                    <th>Category</th>
+                                    <th>Vendor</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var expense in filteredExpenses)
+                                {
+                                    <tr>
+                                        <td>@expense.Date.ToString("yyyy-MM-dd")</td>
+                                        <td>@expense.Description</td>
+                                        <td><span class="badge bg-secondary">@expense.Category</span></td>
+                                        <td>@expense.Vendor</td>
+                                        <td>R @expense.Amount.ToString("N2")</td>
+                                        <td>
+                                            @if (expense.IsApproved)
+                                            {
+                                                <span class="badge bg-success">Approved</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-warning">Pending</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (!expense.IsApproved)
+                                            {
+                                                <button class="btn btn-sm btn-danger" 
+                                                        @onclick="@(() => DeleteExpense(expense.Id))">
+                                                    Delete
+                                                </button>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted text-center">No expenses found.</p>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private bool isLoading = true;
+    private string? errorMessage;
+    private bool? currentFilter = null;
+    
+    private List<Expense> allExpenses = new();
+    private List<Expense> pendingExpenses = new();
+    private List<Expense> approvedExpenses = new();
+    private List<Expense> filteredExpenses = new();
+    
+    private decimal totalExpenses = 0;
+    private decimal monthlyExpenses = 0;
+    
+    private Expense newExpense = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Console.WriteLine("=== EXPENSES COMPONENT INITIALIZED ===");
+        await LoadExpensesData();
+    }
+
+    private void NavigateToDashboard()
+    {
+        Navigation.NavigateTo("/employee/finance/dashboard");
+    }
+
+    private async Task LoadExpensesData()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = null;
+            StateHasChanged();
+
+            Console.WriteLine("Loading expenses data...");
+            
+            allExpenses = await FinanceService.GetAllExpensesAsync();
+            pendingExpenses = await FinanceService.GetPendingExpensesAsync();
+            approvedExpenses = await FinanceService.GetApprovedExpensesAsync();
+            totalExpenses = await FinanceService.GetTotalExpensesAsync();
+            
+            // Calculate monthly expenses
+            var currentMonth = DateTime.UtcNow.Month;
+            var currentYear = DateTime.UtcNow.Year;
+            monthlyExpenses = allExpenses
+                .Where(e => e.Date.Month == currentMonth && e.Date.Year == currentYear && e.IsApproved)
+                .Sum(e => e.Amount);
+            
+            filteredExpenses = allExpenses;
+            
+            Console.WriteLine($"Loaded {allExpenses.Count} expenses, {pendingExpenses.Count} pending, {approvedExpenses.Count} approved");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading expenses: {ex.Message}";
+            Console.WriteLine($"❌ Error loading expenses: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void LogFieldChange(string fieldName, string value)
+    {
+        Console.WriteLine($"Field '{fieldName}' changed to: '{value}'");
+    }
+
+    private void LogCurrentState()
+    {
+        Console.WriteLine("=== CURRENT FORM STATE ===");
+        Console.WriteLine($"Description: '{newExpense.Description}'");
+        Console.WriteLine($"Amount: {newExpense.Amount}");
+        Console.WriteLine($"Category: {newExpense.Category}");
+        Console.WriteLine($"Vendor: '{newExpense.Vendor}'");
+        Console.WriteLine($"ReceiptNumber: '{newExpense.ReceiptNumber}'");
+        Console.WriteLine($"Date: {newExpense.Date}");
+        Console.WriteLine($"IsApproved: {newExpense.IsApproved}");
+        Console.WriteLine("==========================");
+    }
+
+    private bool IsFormValid()
+    {
+        return !string.IsNullOrWhiteSpace(newExpense.Description) &&
+               newExpense.Amount > 0 &&
+               newExpense.Category != 0;
+    }
+
+    private async Task HandleAddExpense()
+    {
+        Console.WriteLine("=== HANDLE ADD EXPENSE STARTED ===");
+        LogCurrentState();
+        
+        try
+        {
+            // Manual validation as fallback
+            Console.WriteLine("=== VALIDATION CHECK ===");
+            if (string.IsNullOrWhiteSpace(newExpense.Description))
+            {
+                errorMessage = "Description is required";
+                Console.WriteLine("❌ Validation failed: Description is empty");
+                Console.WriteLine($"Description is null: {newExpense.Description == null}");
+                Console.WriteLine($"Description is empty: {newExpense.Description == ""}");
+                Console.WriteLine($"Description is whitespace: {string.IsNullOrWhiteSpace(newExpense.Description)}");
+                StateHasChanged();
+                return;
+            }
+
+            if (newExpense.Amount <= 0)
+            {
+                errorMessage = "Amount must be greater than 0";
+                Console.WriteLine($"❌ Validation failed: Amount is {newExpense.Amount}");
+                StateHasChanged();
+                return;
+            }
+
+            if (newExpense.Category == 0) // Assuming 0 is the default/unset value
+            {
+                errorMessage = "Category is required";
+                Console.WriteLine($"❌ Validation failed: Category is {newExpense.Category}");
+                StateHasChanged();
+                return;
+            }
+
+            Console.WriteLine("✅ All validation passed");
+            errorMessage = null;
+            
+            // Ensure the expense has a date
+            if (newExpense.Date == default)
+            {
+                newExpense.Date = DateTime.UtcNow;
+                Console.WriteLine($"Set default date: {newExpense.Date}");
+            }
+
+            Console.WriteLine("Calling FinanceService.AddExpenseAsync...");
+            
+            // Create a NEW instance to avoid any reference issues
+            var expenseToAdd = new Expense
+            {
+                Description = newExpense.Description?.Trim() ?? "",
+                Amount = newExpense.Amount,
+                Category = newExpense.Category,
+                Vendor = newExpense.Vendor?.Trim() ?? "",
+                ReceiptNumber = newExpense.ReceiptNumber?.Trim() ?? "",
+                Date = newExpense.Date,
+                IsApproved = false // Explicitly set to false for new expenses
+            };
+            
+            Console.WriteLine($"Expense to add - Desc: '{expenseToAdd.Description}', Amount: {expenseToAdd.Amount}, Category: {expenseToAdd.Category}");
+            
+            var result = await FinanceService.AddExpenseAsync(expenseToAdd);
+            Console.WriteLine($"✅ Expense added successfully via service. ID: {result.Id}");
+            
+            // Reset form
+            newExpense = new Expense();
+            Console.WriteLine("✅ Form reset");
+            
+            // Reload data
+            await LoadExpensesData();
+            Console.WriteLine("✅ Expenses data reloaded");
+            
+            // Show success message
+            errorMessage = "Expense submitted successfully!";
+            StateHasChanged();
+            
+            Console.WriteLine("✅ Success message shown");
+            
+            // Clear success message after 3 seconds
+            await Task.Delay(3000);
+            errorMessage = null;
+            StateHasChanged();
+            
+            Console.WriteLine("✅ Success message cleared");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error adding expense: {ex.Message}";
+            Console.WriteLine($"❌ Exception in HandleAddExpense: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            StateHasChanged();
+        }
+        
+        Console.WriteLine("=== HANDLE ADD EXPENSE COMPLETED ===");
+    }
+
+    private async Task DeleteExpense(int id)
+    {
+        try
+        {
+            Console.WriteLine($"Deleting expense with ID: {id}");
+            await FinanceService.DeleteExpenseAsync(id);
+            await LoadExpensesData();
+            Console.WriteLine($"✅ Expense {id} deleted successfully");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error deleting expense: {ex.Message}";
+            Console.WriteLine($"❌ Error deleting expense {id}: {ex.Message}");
+        }
+    }
+
+    private void FilterExpenses(bool? isApproved)
+    {
+        currentFilter = isApproved;
+        if (isApproved == null)
+            filteredExpenses = allExpenses;
+        else
+            filteredExpenses = allExpenses.Where(e => e.IsApproved == isApproved).ToList();
+        
+        Console.WriteLine($"Filtered expenses: {filteredExpenses.Count} (Approved: {isApproved})");
+        StateHasChanged();
+    }
+
+    private void ResetForm()
+    {
+        Console.WriteLine("Resetting form...");
+        newExpense = new Expense();
+        errorMessage = null;
+        StateHasChanged();
+        Console.WriteLine("Form reset complete");
+    }
+}

@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="PdfSharpCore" Version="1.3.67" />
     <ProjectReference Include="..\TestAbsa.Client\TestAbsa.Client.csproj" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="8.0.15" />
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="8.0.15" />
@@ -19,9 +20,7 @@
 
   <ItemGroup>
     <Folder Include="Components\Pages\Employee\CRM\" />
-    <Folder Include="Components\Pages\Employee\Finance\" />
     <Folder Include="Components\Pages\Manager\CRM\" />
-    <Folder Include="Components\Pages\Manager\Finance\" />
   </ItemGroup>
 
 </Project>

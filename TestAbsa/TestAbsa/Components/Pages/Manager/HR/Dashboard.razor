@@ -1,4 +1,4 @@
-﻿@page "/Manager/HR/Dashboard"
+﻿@page "/manager/hr/dashboard"
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
@@ -16,8 +16,6 @@
 
 <h1>HR Management Dashboard</h1>
 
-
-
 <div class="mb-4">
     <ul class="nav nav-tabs">
         <li class="nav-item">
@@ -32,12 +30,18 @@
                 <i class="bi bi-people"></i> User Management
             </button>
         </li>
+        <li class="nav-item">
+            <button class="nav-link @(mainView == MainView.TimesheetApprovals ? "active" : "")"
+                    @onclick="() => SwitchMainView(MainView.TimesheetApprovals)">
+                <i class="bi bi-clock-history"></i> Timesheet Approvals
+            </button>
+        </li>
     </ul>
 </div>
 
 @if (mainView == MainView.LeaveManagement)
 {
-    @* Leave Management Section *@
+    @* Leave Management Section (existing code) *@
     <div class="mb-3">
         <button class="btn @(leaveView == LeaveViewType.Pending ? "btn-primary" : "btn-outline-primary") me-2"
                 @onclick="() => ToggleLeaveView(LeaveViewType.Pending)"
@@ -308,9 +312,184 @@
         </div>
     }
 }
+else if (mainView == MainView.TimesheetApprovals)
+{
+    @* Timesheet Approvals Section *@
+    <div class="mb-3">
+        <button class="btn @(timesheetFilter == "Pending" ? "btn-primary" : "btn-outline-primary") me-2"
+                @onclick="@(() => ChangeTimesheetFilter("Pending"))"
+                disabled="@isLoading">
+            <i class="bi bi-clock-history"></i> Pending
+            @if (timesheetFilter == "Pending" && timesheets != null)
+            {
+                <span class="badge bg-light text-dark ms-1">@timesheets.Count</span>
+            }
+        </button>
+        <button class="btn @(timesheetFilter == "Approved" ? "btn-primary" : "btn-outline-primary") me-2"
+                @onclick="@(() => ChangeTimesheetFilter("Approved"))"
+                disabled="@isLoading">
+            <i class="bi bi-check-circle"></i> Approved
+            @if (timesheetFilter == "Approved" && timesheets != null)
+            {
+                <span class="badge bg-light text-dark ms-1">@timesheets.Count</span>
+            }
+        </button>
+        <button class="btn @(timesheetFilter == "Rejected" ? "btn-primary" : "btn-outline-primary")"
+                @onclick="@(() => ChangeTimesheetFilter("Rejected"))"
+                disabled="@isLoading">
+            <i class="bi bi-x-circle"></i> Rejected
+            @if (timesheetFilter == "Rejected" && timesheets != null)
+            {
+                <span class="badge bg-light text-dark ms-1">@timesheets.Count</span>
+            }
+        </button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(statusMessage))
+    {
+        <div class="alert @(statusMessage.StartsWith("Error") ? "alert-danger" : "alert-success") alert-dismissible fade show" role="alert">
+            @statusMessage
+            <button type="button" class="btn-close" @onclick="() => statusMessage = null"></button>
+        </div>
+    }
+
+    @if (isLoading)
+    {
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading timesheets...</p>
+        </div>
+    }
+    else
+    {
+        @if (timesheets == null || !timesheets.Any())
+        {
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> No @timesheetFilter.ToLower() timesheets found.
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Date</th>
+                            <th>Project</th>
+                            <th>Type</th>
+                            <th>Hours</th>
+                            <th>Description</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var entry in timesheets)
+                        {
+                            <tr>
+                                <td>@(entry.Employee?.FullName ?? "Unknown")</td>
+                                <td>@entry.WorkDate.ToString("yyyy-MM-dd")</td>
+                                <td>@entry.ProjectName</td>
+                                <td><span class="badge bg-secondary">@entry.TaskType</span></td>
+                                <td><strong>@entry.HoursWorked</strong></td>
+                                <td><small>@entry.Description</small></td>
+                                <td>
+                                    @if (entry.IsApproved)
+                                    {
+                                        <span class="badge bg-success">Approved</span>
+                                    }
+                                    else if (entry.IsRejected)
+                                    {
+                                        <span class="badge bg-danger">Rejected</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning">Pending</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!entry.IsApproved && !entry.IsRejected)
+                                    {
+                                        <button class="btn btn-success btn-sm"
+                                                @onclick="() => ApproveTimesheet(entry.Id)"
+                                                disabled="@isProcessing">
+                                            <i class="bi bi-check-circle"></i> Approve
+                                        </button>
+                                        <button class="btn btn-danger btn-sm ms-1"
+                                                @onclick="() => OpenTimesheetRejectModal(entry.Id)"
+                                                disabled="@isProcessing">
+                                            <i class="bi bi-x-circle"></i> Reject
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <small class="text-muted">
+                                            @if (entry.IsApproved && entry.ApprovedDate.HasValue)
+                                            {
+                                                <text>Approved @entry.ApprovedDate.Value.ToLocalTime().ToString("g")</text>
+                                            }
+                                            else if (entry.IsRejected && entry.RejectedDate.HasValue)
+                                            {
+                                                <text>Rejected @entry.RejectedDate.Value.ToLocalTime().ToString("g")</text>
+                                            }
+                                        </small>
+                                    }
+                                </td>
+                            </tr>
+                            @if (entry.IsRejected && !string.IsNullOrEmpty(entry.RejectionReason))
+                            {
+                                <tr>
+                                    <td colspan="8" class="bg-light">
+                                        <small><strong>Rejection Reason:</strong> @entry.RejectionReason</small>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    }
+
+    @* Timesheet Rejection Modal *@
+    @if (showTimesheetRejectModal)
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-x-circle text-danger"></i> Reject Timesheet
+                        </h5>
+                        <button type="button" class="btn-close" @onclick="CloseTimesheetRejectModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Rejection Reason (Required)</label>
+                            <textarea class="form-control" rows="3" @bind="timesheetRejectionReason" placeholder="Enter reason for rejection..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseTimesheetRejectModal">Cancel</button>
+                        <button type="button" class="btn btn-danger" @onclick="ConfirmTimesheetReject" disabled="@isProcessing">
+                            @if (isProcessing)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            Reject
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
 else if (mainView == MainView.UserManagement)
 {
-    @* User Management Section *@
+    @* User Management Section (existing code) *@
     <div class="mb-3">
         <button class="btn @(userView == UserViewType.Pending ? "btn-primary" : "btn-outline-primary") me-2"
                 @onclick="() => ToggleUserView(UserViewType.Pending)"
@@ -512,7 +691,7 @@ else if (mainView == MainView.UserManagement)
 }
 
 @code {
-    private enum MainView { LeaveManagement, UserManagement }
+    private enum MainView { LeaveManagement, UserManagement, TimesheetApprovals }
     private enum LeaveViewType { Pending, Approved, Rejected }
     private enum UserViewType { Pending, Approved, Rejected }
 
@@ -537,6 +716,13 @@ else if (mainView == MainView.UserManagement)
     private List<ApplicationUser>? approvedUsers;
     private List<ApplicationUser>? rejectedUsers;
     private Dictionary<string, string> managerEmails = new();
+
+    // Timesheet Management
+    private List<TimesheetEntry>? timesheets;
+    private string timesheetFilter = "Pending";
+    private bool showTimesheetRejectModal = false;
+    private int timesheetRejectTargetId;
+    private string timesheetRejectionReason = string.Empty;
 
     // Shared state
     private string? statusMessage;
@@ -571,7 +757,6 @@ else if (mainView == MainView.UserManagement)
             var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
             var claimsPrincipal = authState.User;
             
-            // Get user ID from claims instead of calling UserManager
             currentManagerId = UserManager.GetUserId(claimsPrincipal);
             
             if (string.IsNullOrEmpty(currentManagerId))
@@ -597,10 +782,19 @@ else if (mainView == MainView.UserManagement)
             {
                 await ToggleLeaveView(LeaveViewType.Pending);
             }
-            else
+            else if (view == MainView.UserManagement)
             {
                 await ToggleUserView(UserViewType.Pending);
             }
+            else if (view == MainView.TimesheetApprovals)
+            {
+                await LoadTimesheets();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error switching main view");
+            statusMessage = $"Error: {ex.Message}";
         }
         finally
         {
@@ -714,7 +908,6 @@ else if (mainView == MainView.UserManagement)
             .Where(id => !userEmails.ContainsKey(id))
             .ToList();
 
-        // Load emails one at a time to avoid concurrent DbContext access
         foreach (var userId in userIds)
         {
             try
@@ -920,7 +1113,6 @@ else if (mainView == MainView.UserManagement)
                 .Distinct()
                 .ToList();
 
-            // Load manager emails sequentially
             foreach (var managerId in managerIds)
             {
                 if (!managerEmails.ContainsKey(managerId))
@@ -963,7 +1155,6 @@ else if (mainView == MainView.UserManagement)
                 .Distinct()
                 .ToList();
 
-            // Load manager emails sequentially
             foreach (var managerId in managerIds)
             {
                 if (!managerEmails.ContainsKey(managerId))
@@ -1084,6 +1275,172 @@ else if (mainView == MainView.UserManagement)
         {
             statusMessage = $"Error: {ex.Message}";
             Logger.LogError(ex, "Error rejecting user {UserId}", userId);
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    #endregion
+
+    #region Timesheet Management Methods
+
+    private async Task LoadTimesheets()
+    {
+        if (string.IsNullOrEmpty(currentManagerId))
+        {
+            statusMessage = "Error: Manager ID not found.";
+            return;
+        }
+
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+            
+            var query = context.TimesheetEntries
+                .Include(t => t.Employee)
+                .AsQueryable();
+
+            query = timesheetFilter switch
+            {
+                "Approved" => query.Where(t => t.IsApproved),
+                "Rejected" => query.Where(t => t.IsRejected),
+                _ => query.Where(t => !t.IsApproved && !t.IsRejected)
+            };
+
+            timesheets = await query
+                .OrderByDescending(t => t.WorkDate)
+                .ThenByDescending(t => t.CreatedDate)
+                .Take(50)
+                .ToListAsync();
+
+            if (timesheets == null)
+                timesheets = new List<TimesheetEntry>();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading timesheets");
+            statusMessage = $"Error loading timesheets: {ex.Message}";
+            timesheets = new List<TimesheetEntry>();
+        }
+    }
+
+    private async Task ChangeTimesheetFilter(string newFilter)
+    {
+        timesheetFilter = newFilter;
+        isLoading = true;
+        statusMessage = null;
+
+        try
+        {
+            await LoadTimesheets();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ApproveTimesheet(int id)
+    {
+        if (string.IsNullOrEmpty(currentManagerId)) return;
+
+        isProcessing = true;
+        statusMessage = null;
+
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+            
+            var entry = await context.TimesheetEntries.FirstOrDefaultAsync(t => t.Id == id);
+            if (entry == null)
+            {
+                statusMessage = "Error: Timesheet entry not found.";
+                return;
+            }
+
+            entry.IsApproved = true;
+            entry.IsRejected = false;
+            entry.ApprovedByManagerId = currentManagerId;
+            entry.ApprovedDate = DateTime.UtcNow;
+
+            await context.SaveChangesAsync();
+
+            statusMessage = "Timesheet approved successfully.";
+            Logger.LogInformation("Manager {ManagerId} approved timesheet {TimesheetId}", currentManagerId, id);
+            
+            await LoadTimesheets();
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Error: {ex.Message}";
+            Logger.LogError(ex, "Error approving timesheet");
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private void OpenTimesheetRejectModal(int id)
+    {
+        timesheetRejectTargetId = id;
+        timesheetRejectionReason = string.Empty;
+        showTimesheetRejectModal = true;
+    }
+
+    private void CloseTimesheetRejectModal()
+    {
+        showTimesheetRejectModal = false;
+        timesheetRejectTargetId = 0;
+        timesheetRejectionReason = string.Empty;
+    }
+
+    private async Task ConfirmTimesheetReject()
+    {
+        if (timesheetRejectTargetId == 0) return;
+
+        if (string.IsNullOrWhiteSpace(timesheetRejectionReason))
+        {
+            statusMessage = "Error: Please provide a reason for rejection.";
+            return;
+        }
+
+        if (string.IsNullOrEmpty(currentManagerId)) return;
+
+        isProcessing = true;
+        statusMessage = null;
+
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+            
+            var entry = await context.TimesheetEntries.FirstOrDefaultAsync(t => t.Id == timesheetRejectTargetId);
+            if (entry == null)
+            {
+                statusMessage = "Error: Timesheet entry not found.";
+                return;
+            }
+
+            entry.IsRejected = true;
+            entry.IsApproved = false;
+            entry.RejectionReason = timesheetRejectionReason;
+            entry.RejectedByManagerId = currentManagerId;
+            entry.RejectedDate = DateTime.UtcNow;
+
+            await context.SaveChangesAsync();
+
+            statusMessage = "Timesheet rejected successfully.";
+            Logger.LogInformation("Manager {ManagerId} rejected timesheet {TimesheetId}", currentManagerId, timesheetRejectTargetId);
+            
+            CloseTimesheetRejectModal();
+            await LoadTimesheets();
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Error: {ex.Message}";
+            Logger.LogError(ex, "Error rejecting timesheet");
         }
         finally
         {

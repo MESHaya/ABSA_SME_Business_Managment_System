@@ -19,8 +19,12 @@ builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, PersistingRevalidatingAuthenticationStateProvider>();
 
+
+
 // Register your Inventory Service
 builder.Services.AddScoped<TestAbsa.Services.IInventoryService, TestAbsa.Services.InventoryService>();
+builder.Services.AddScoped<IFinanceService, FinanceService>();
+
 
 builder.Services.AddAuthentication(options =>
 {

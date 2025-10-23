@@ -6,62 +6,148 @@
 @using TestAbsa.Data.Models
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.Components.Authorization
+@using TestAbsa.Services
 @inject IDbContextFactory<ApplicationDbContext> DbContextFactory
 @inject UserManager<ApplicationUser> UserManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IFinanceService FinanceService
 
-<div class="container mt-4">
-    <!-- Task & Stock Warning Section -->
+<div class="container py-4">
+    <!-- Header -->
     <div class="row mb-4">
-        <!-- Today's Task -->
-        <div class="col-md-6">
-            <div class="card p-3 shadow-sm">
-                <h5>Today's Task</h5>
-                <div class="text-muted">No tasks assigned yet.</div>
+        <div class="col">
+            <h2 class="fw-bold text-primary">Employee Dashboard</h2>
+            <p class="text-muted">Overview of stock, finances, and quick tools</p>
+        </div>
+    </div>
+
+    <!-- Quick Action Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="card h-100 text-center shadow-sm border-0">
+                <div class="card-body">
+                    <i class="fas fa-boxes fa-3x text-primary mb-3"></i>
+                    <h5>Manage Products</h5>
+                    <p class="text-muted">View and update stock levels</p>
+                    <NavLink href= "/employee/inventory/dashboard" class="btn btn-outline-primary btn-sm">
+                        Go to Products
+                    </NavLink>
+                </div>
             </div>
         </div>
 
+        <div class="col-md-4">
+            <div class="card h-100 text-center shadow-sm border-0">
+                <div class="card-body">
+                    <i class="fas fa-file-invoice-dollar fa-3x text-primary mb-3"></i>
+                    <h5>Finance Management</h5>
+                    <p class="text-muted">View expenses, invoices, and reports</p>
+                    <NavLink href="/employee/finance/dashboard" class="btn btn-outline-primary btn-sm">
+                        Go to Finance
+                    </NavLink>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card h-100 text-center shadow-sm border-0">
+                <div class="card-body">
+                    <i class="fas fa-chart-line fa-3x text-primary mb-3"></i>
+                    <h5>Reports</h5>
+                    <p class="text-muted">Track performance and export summaries</p>
+                    <NavLink href="/employee/reports" class="btn btn-outline-primary btn-sm">
+                        Go to Reports
+                    </NavLink>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stock & Finance Section -->
+    <div class="row g-4">
         <!-- Stock Warning -->
         <div class="col-md-6">
-            <div class="card p-3 shadow-sm">
-                <h5>Stock Warning</h5>
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Stock Warnings</h5>
+                </div>
+                <div class="card-body">
+                    @if (isLoading)
+                    {
+                        <div class="text-muted">
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            Loading stock warnings...
+                        </div>
+                    }
+                    else if (lowStockProducts.Any())
+                    {
+                        <ul class="list-unstyled mb-0">
+                            @foreach (var product in lowStockProducts)
+                            {
+                                <li class="mb-2">
+                                    @if (product.StockLevel == "critical")
+                                    {
+                                        <span class="text-danger">🔴</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-warning">⚠️</span>
+                                    }
 
-                @if (isLoading)
-                {
-                    <div class="text-muted">
-                        <span class="spinner-border spinner-border-sm me-2"></span>
-                        Loading stock warnings...
-                    </div>
-                }
-                else if (lowStockProducts.Any())
-                {
-                    <ul class="list-unstyled mb-0">
-                        @foreach (var product in lowStockProducts)
-                        {
-                            <li class="mb-2">
-                                @if (product.StockLevel == "critical")
-                                {
-                                    <span class="text-danger">🔴</span>
-                                }
-                                else
-                                {
-                                    <span class="text-warning">⚠️</span>
-                                }
+                                    <strong>@product.Name</strong> —
+                                    <span class="@(product.StockLevel == "critical" ? "text-danger" : "text-warning")">
+                                        @product.StockLevel (@product.CurrentStock units)
+                                    </span>
+                                </li>
+                            }
+                        </ul>
+                    }
+                    else
+                    {
+                        <div class="text-success">
+                            ✅ All products are well stocked!
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
 
-                                <strong>@product.Name</strong> —
-                                <span class="@(product.StockLevel == "critical" ? "text-danger" : "text-warning")">
-                                    @product.StockLevel (@product.CurrentStock units)
-                                </span>
-                            </li>
-                        }
-                    </ul>
-                }
-                else
-                {
-                    <div class="text-success">
-                        ✅ All products are well stocked!
-                    </div>
-                }
+        <!-- Finance Summary -->
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Finance Summary</h5>
+                </div>
+                <div class="card-body text-center">
+                    @if (financeLoading)
+                    {
+                        <div class="text-muted py-4">
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            Loading finance data...
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <h6 class="text-muted">Total Expenses</h6>
+                                <h4 class="fw-bold">R @totalExpenses.ToString("N2")</h4>
+                            </div>
+                            <div class="col-6">
+                                <h6 class="text-muted">Pending Expenses</h6>
+                                <h4 class="fw-bold text-warning">@pendingExpensesCount</h4>
+                            </div>
+                            <div class="col-6">
+                                <h6 class="text-muted">Total Invoices</h6>
+                                <h4 class="fw-bold text-success">@totalInvoicesCount</h4>
+                            </div>
+                            <div class="col-6">
+                                <h6 class="text-muted">Outstanding</h6>
+                                <h4 class="fw-bold text-danger">R @outstandingAmount.ToString("N2")</h4>
+                            </div>
+                        </div>
+                    }
+                </div>
             </div>
         </div>
     </div>
@@ -70,10 +156,16 @@
 @code {
     private List<LowStockProduct> lowStockProducts = new();
     private bool isLoading = true;
+    private bool financeLoading = true;
+
+    private decimal totalExpenses;
+    private int pendingExpensesCount;
+    private int totalInvoicesCount;
+    private decimal outstandingAmount;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadLowStockProducts();
+        await Task.WhenAll(LoadLowStockProducts(), LoadFinanceSummary());
     }
 
     private async Task LoadLowStockProducts()
@@ -101,11 +193,39 @@
         catch (Exception ex)
         {
             Console.WriteLine($"Error loading low stock products: {ex.Message}");
-            lowStockProducts = new List<LowStockProduct>();
+            lowStockProducts = new();
         }
         finally
         {
             isLoading = false;
+        }
+    }
+
+    private async Task LoadFinanceSummary()
+    {
+        try
+        {
+            financeLoading = true;
+
+            var totalExpensesTask = FinanceService.GetTotalExpensesAsync();
+            var pendingExpensesTask = FinanceService.GetPendingExpensesAsync();
+            var invoicesTask = FinanceService.GetAllInvoicesAsync();
+            var outstandingTask = FinanceService.GetTotalOutstandingInvoicesAsync();
+
+            await Task.WhenAll(totalExpensesTask, pendingExpensesTask, invoicesTask, outstandingTask);
+
+            totalExpenses = totalExpensesTask.Result;
+            pendingExpensesCount = pendingExpensesTask.Result.Count;
+            totalInvoicesCount = invoicesTask.Result.Count;
+            outstandingAmount = outstandingTask.Result;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading finance summary: {ex.Message}");
+        }
+        finally
+        {
+            financeLoading = false;
         }
     }
 

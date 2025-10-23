@@ -1,0 +1,142 @@
+﻿@page "/employee/finance/dashboard"
+
+@using TestAbsa.Data.Models
+@using TestAbsa.Data
+@using TestAbsa.Services
+@inject IFinanceService FinanceService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@rendermode InteractiveServer
+
+<PageTitle>Finance Dashboard</PageTitle>
+
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    <div class="row mb-4 align-items-center">
+        <div class="col">
+            <h2 class="fw-bold text-primary mb-1">Finance Dashboard</h2>
+            <p class="text-muted">Monitor your finances, track expenses, and manage invoices efficiently.</p>
+        </div>
+    </div>
+
+    <!-- Management Cards -->
+    <div class="row g-4">
+        <!-- Expenses Card -->
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100 border-0 hover-card">
+                <div class="card-body text-center p-4">
+                    <div class="icon-circle mb-3 bg-primary bg-opacity-10 text-primary">
+                        <i class="fas fa-wallet fa-3x"></i>
+                    </div>
+                    <h4 class="fw-semibold mb-2">Expense Management</h4>
+                    <p class="text-muted mb-4">Submit, review, and manage all your business-related expenses easily.</p>
+                    <NavLink class="btn btn-primary px-4" href="/employee/finance/expenses">
+                        💼 Manage Expenses
+                    </NavLink>
+                </div>
+            </div>
+        </div>
+
+        <!-- Invoices Card -->
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100 border-0 hover-card">
+                <div class="card-body text-center p-4">
+                    <div class="icon-circle mb-3 bg-success bg-opacity-10 text-success">
+                        <i class="fas fa-file-invoice-dollar fa-3x"></i>
+                    </div>
+                    <h4 class="fw-semibold mb-2">Invoice Management</h4>
+                    <p class="text-muted mb-4">Create, view, and track invoices for smooth financial operations.</p>
+                    <NavLink class="btn btn-success px-4" href="/employee/finance/invoices">
+                        📄 Manage Invoices
+                    </NavLink>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="row mt-5">
+        <div class="col">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Quick Overview</h5>
+                </div>
+                <div class="card-body py-4">
+                    <div class="row text-center g-4">
+                        <div class="col-md-3">
+                            <div class="stat-box">
+                                <h6 class="text-muted">Total Expenses</h6>
+                                <h4 class="fw-bold text-dark">R @totalExpenses.ToString("N2")</h4>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-box">
+                                <h6 class="text-muted">Pending Expenses</h6>
+                                <h4 class="fw-bold text-warning">@pendingExpensesCount</h4>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-box">
+                                <h6 class="text-muted">Total Invoices</h6>
+                                <h4 class="fw-bold text-success">@totalInvoicesCount</h4>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-box">
+                                <h6 class="text-muted">Outstanding</h6>
+                                <h4 class="fw-bold text-danger">R @outstandingAmount.ToString("N2")</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@code {
+    private decimal totalExpenses = 0;
+    private int pendingExpensesCount = 0;
+    private int totalInvoicesCount = 0;
+    private decimal outstandingAmount = 0;
+     private bool isLoading = true;
+
+
+protected override async Task OnInitializedAsync()
+{
+    try
+    {
+        isLoading = true;
+
+        // Load all data concurrently for best performance
+        var totalExpensesTask = FinanceService.GetTotalExpensesAsync();
+        var pendingExpensesTask = FinanceService.GetPendingExpensesAsync();
+        var invoicesTask = FinanceService.GetAllInvoicesAsync();
+        var outstandingTask = FinanceService.GetTotalOutstandingInvoicesAsync();
+
+        await Task.WhenAll(totalExpensesTask, pendingExpensesTask, invoicesTask, outstandingTask);
+
+        // Assign results
+        totalExpenses = totalExpensesTask.Result;
+        pendingExpensesCount = pendingExpensesTask.Result.Count;
+        totalInvoicesCount = invoicesTask.Result.Count;
+        outstandingAmount = outstandingTask.Result;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[ERROR] Failed to load dashboard data: {ex}");
+    }
+    finally
+    {
+        isLoading = false;
+    }
+}
+
+
+
+    private void NavigateToInvoices()
+    {
+        Navigation.NavigateTo("/employee/finance/invoices");
+    }
+}
