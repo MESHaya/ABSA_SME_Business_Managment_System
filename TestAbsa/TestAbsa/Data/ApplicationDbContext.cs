@@ -148,7 +148,7 @@ namespace TestAbsa.Data
                 .HasForeignKey(l => l.ManagerId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-<<<<<<< HEAD
+
             // --- Customer Configuration ---
             builder.Entity<Customer>()
                 .Property(c => c.Name)
@@ -207,9 +207,7 @@ namespace TestAbsa.Data
                 .Property(e => e.Description)
                 .IsRequired()
                 .HasMaxLength(500);
-=======
 
->>>>>>> 8bc4f141db955bfed43ead08745fdc14d01c1eac
         }
     }
 }
