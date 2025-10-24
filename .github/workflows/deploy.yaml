@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - main
+      - New-Working-App
   pull_request:
     branches:
       - main
+      - New-Working-App
 
 env:
   # The configuration (Release or Debug) to build
