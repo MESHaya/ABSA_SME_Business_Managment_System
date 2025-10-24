@@ -2,11 +2,9 @@ name: .NET Core Build Check
 
 on:
   push:
-    # Changed from "master" to "main" (assuming modern branch convention)
-    branches: [ "main" ]
+    branches: [ "New-Working-App" ]
   pull_request:
-    # Changed from "master" to "main"
-    branches: [ "main" ]
+    branches: [ "New-Working-App" ]
 
 jobs:
   build:
