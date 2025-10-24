@@ -3,11 +3,9 @@ name: CI/CD Pipeline for TestAbsa SME System
 on:
   push:
     branches:
-      - main
       - New-Working-App
   pull_request:
     branches:
-      - main
       - New-Working-App
 
 env:
