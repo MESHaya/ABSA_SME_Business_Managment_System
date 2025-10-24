@@ -11,6 +11,8 @@ namespace TestAbsa.Data
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
         public string FullName { get; set; } = string.Empty;
+     
+
 
         // Role selection
         public string UserRole { get; set; } = "Employee"; // "Manager" or "Employee"

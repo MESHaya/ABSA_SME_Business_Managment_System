@@ -280,18 +280,6 @@ html[b-9o619u5v4c], body[b-9o619u5v4c] {
     font-weight: 500;
 }
 
-.btn-logout[b-ma8lenznbn] {
-    background: none;
-    border: none;
-    color: #fff;
-    font-size: 1.1rem;
-    cursor: pointer;
-    transition: color 0.2s ease-in-out;
-}
-
-    .btn-logout:hover[b-ma8lenznbn] {
-        color: #e31837;
-    }
 
 /* Responsive */
 @media (max-width: 900px) {
@@ -316,6 +304,24 @@ html[b-9o619u5v4c], body[b-9o619u5v4c] {
     .page-title[b-ma8lenznbn] {
         margin: 0.5rem 0;
     }
+
+    .btn-logout[b-ma8lenznbn] {
+        background: none;
+        border: 1px solid #fff;
+        color: red;
+        font-size: 1.1rem;
+        cursor: pointer;
+        padding: 6px 10px;
+        border-radius: 8px;
+        transition: all 0.2s ease-in-out;
+    }
+
+        .btn-logout:hover[b-ma8lenznbn] {
+            background-color: #e31837;
+            color: #fff;
+            border-color: #e31837;
+        }
+
 }
 /* _content/TestAbsa/Components/Pages/Shared/Header.razor.rz.scp.css */
 /* ==== HEADER WRAPPER ==== */
@@ -327,7 +333,7 @@ html[b-9o619u5v4c], body[b-9o619u5v4c] {
 
 /* ==== HEADER STYLING ==== */
 .user-header[b-lcsv8p2v0p] {
-    background-color: #003366; /* ABSA deep blue */
+    background-color: #002147; /* ABSA deep blue */
     color: white;
     padding: 1rem;
     border-radius: 0 0 12px 12px;

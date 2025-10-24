@@ -34,15 +34,17 @@
 
             <button type="submit" class="w-100 btn btn-lg btn-primary mb-3">Save</button>
 
-         <div class="d-flex justify-content-between">
-    <NavLink class="btn btn-outline-secondary w-50 me-2" href="/employee/hr/timesheets">
-        🕒 Timesheets
-    </NavLink>
-    <NavLink class="btn btn-outline-success w-50" href="/employee/hr/leave-requests">
-        📝 Leave Requests
-    </NavLink>
-</div>
-
+            @if (isEmployee)
+            {
+                <div class="d-flex justify-content-between">
+                    <NavLink class="btn btn-outline-secondary w-50 me-2" href="/employee/hr/timesheets">
+                        🕒 Timesheets
+                    </NavLink>
+                    <NavLink class="btn btn-outline-success w-50" href="/employee/hr/leave-requests">
+                        📝 Leave Requests
+                    </NavLink>
+                </div>
+            }
         </EditForm>
     </div>
 </div>
@@ -51,6 +53,8 @@
     private ApplicationUser user = default!;
     private string? username;
     private string? phoneNumber;
+    private bool isEmployee = false;
+     
 
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
@@ -65,6 +69,7 @@
         phoneNumber = await UserManager.GetPhoneNumberAsync(user);
 
         Input.PhoneNumber ??= phoneNumber;
+           isEmployee = await UserManager.IsInRoleAsync(user, "Employee");
     }
 
     private async Task OnValidSubmitAsync()

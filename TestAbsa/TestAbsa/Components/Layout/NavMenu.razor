@@ -9,95 +9,104 @@
 @implements IDisposable
 
 
-<div class="top-navbar">
-    <div class="navbar-brand">
-        <a href="/" class="brand-link">TestAbsa SME Portal</a>
-    </div>
+<AuthorizeView>
+    <Authorized Context="context">
+        <div class="page-title">@PageName</div>
 
-    <AuthorizeView>
-        <Authorized Context="context">
-            <div class="page-title">@PageName</div>
+        <nav class="nav-links">
+            @if (isManager)
+            {
+                <!-- Manager Navigation -->
+                <a href="/manager/dashboard" class="nav-link">
+                    <span class="bi bi-house-door-fill"></span> Dashboard
+                </a>
+                <a href="/manager/inventory/dashboard" class="nav-link">
+                    <span class="bi bi-box-seam"></span> Inventory
+                </a>
+            
 
-            <nav class="nav-links">
-                @if (isManager)
-                {
-                    <!-- Manager Navigation -->
-                    <a href="/manager/dashboard" class="nav-link">
-                        <span class="bi bi-house-door-fill"></span> Dashboard
-                    </a>
-                    <a href="/manager/inventory/dashboard" class="nav-link">
-                        <span class="bi bi-box-seam"></span> Inventory
-                    </a>
+                <a href="/manager/hr/dashboard" class="nav-link">
+                    <span class="bi bi-currency-dollar"></span> HR
+                </a>
+
+                <a href="/manager/finance/dashboard" class="nav-link">
+                    <span class="bi bi-currency-dollar"></span> Finance
+                </a>
+                <a href="/settings" class="nav-link">
+                    <span class="bi bi-gear-fill"></span> Settings
+                </a>
                 
+             <form action="Account/Logout" method="post" style="display: inline; margin: 0;">
+    <AntiforgeryToken />
+    <button type="submit" 
+            class="nav-link btn btn-danger text-white" 
+            style="border: none; cursor: pointer; padding: 0.5rem 1rem; border-radius: 6px;">
+        <span class="bi bi-box-arrow-right"></span> Logout
+    </button>
+</form>
 
-                    <a href="/manager/hr/dashboard" class="nav-link">
-                        <span class="bi bi-currency-dollar"></span> HR
-                    </a>
-
-                    <a href="/manager/finance/dashboard" class="nav-link">
-                        <span class="bi bi-currency-dollar"></span> Finance
-                    </a>
-                    <a href="/settings" class="nav-link">
-                        <span class="bi bi-gear-fill"></span> Settings
-                    </a>
-                }
-                else if (isEmployee)
-                {
-                    <!-- Employee Navigation -->
-                    <a href="/employee/dashboard" class="nav-link">
-                        <span class="bi bi-house-door-fill"></span> Dashboard
-                    </a>
-                    <a href="/employee/inventory/dashboard" class="nav-link">
-                        <span class="bi bi-box-seam"></span> Inventory
-                    </a>
-                    <a href="/employee/finance/dashboard" class="nav-link">
-                        <span class="bi bi-currency-dollar"></span> Finance
-                    </a>
-                    <a href="/settings" class="nav-link">
-                        <span class="bi bi-gear-fill"></span> Settings
-                    </a>
-                }
-            </nav>
-
-            <input type="text" placeholder="Search in site" class="search-bar" />
-
-            <div class="user-menu">
-                <a href="/Account/Manage" class="profile-avatar">
-                    <img src="https://i.pravatar.cc/150?img=5" alt="@context.User.Identity?.Name" />
-                    <span class="username">@context.User.Identity?.Name</span>
-                    @if (isManager)
-                    {
-                        <span class="badge bg-primary ms-1" style="font-size: 0.7rem;">Manager</span>
-                    }
-                    else if (isEmployee)
-                    {
-                        <span class="badge bg-secondary ms-1" style="font-size: 0.7rem;">Employee</span>
-                    }
+            }
+            else if (isEmployee)
+            {
+                <!-- Employee Navigation -->
+                <a href="/employee/dashboard" class="nav-link">
+                    <span class="bi bi-house-door-fill"></span> Dashboard
                 </a>
-                <form action="Account/Logout" method="post" class="logout-form">
-                    <AntiforgeryToken />
-                    <input type="hidden" name="ReturnUrl" value="@currentUrl" />
-                    <button type="submit" class="btn-logout" title="Logout">
-                        <span class="bi bi-box-arrow-right"></span>
-                    </button>
-                </form>
-            </div>
-        </Authorized>
+                <a href="/employee/inventory/dashboard" class="nav-link">
+                    <span class="bi bi-box-seam"></span> Inventory
+                </a>
+                <a href="/employee/finance/dashboard" class="nav-link">
+                    <span class="bi bi-currency-dollar"></span> Finance
+                </a>
+                <a href="/settings" class="nav-link">
+                    <span class="bi bi-gear-fill"></span> Settings
+                </a>
+                
+            <form action="Account/Logout" method="post" style="display: inline; margin: 0;">
+    <AntiforgeryToken />
+    <input type="hidden" name="ReturnUrl" value="/" />
+    <button type="submit" 
+            class="nav-link btn btn-danger text-white" 
+            style="border: none; cursor: pointer; padding: 0.5rem 1rem; border-radius: 6px;">
+        <span class="bi bi-box-arrow-right"></span> Logout
+    </button>
+</form>
 
-        <NotAuthorized>
-            <div class="page-title">Welcome</div>
-            <nav class="nav-links">
-                <a href="/" class="nav-link">Home</a>
-                <a href="/Account/Login" class="nav-link">
-                    <span class="bi bi-person-badge"></span> Login
-                </a>
-                <a href="/Account/Register" class="nav-link">
-                    <span class="bi bi-person"></span> Register
-                </a>
-            </nav>
-        </NotAuthorized>
-    </AuthorizeView>
+            }
+        </nav>
+
+        
+
+<div class="user-menu">
+    <a href="/Account/Manage" class="profile-avatar d-flex align-items-center text-decoration-none">
+        <span class="username">@context.User.Identity?.Name</span>
+        @if (isManager)
+        {
+            <span class="badge bg-primary ms-2" style="font-size: 0.7rem;">Manager</span>
+        }
+        else if (isEmployee)
+        {
+            <span class="badge bg-secondary ms-2" style="font-size: 0.7rem;">Employee</span>
+        }
+    </a>
 </div>
+
+    </Authorized>
+
+    <NotAuthorized>
+        <div class="page-title">Welcome</div>
+        <nav class="nav-links">
+            <a href="/" class="nav-link">Home</a>
+            <a href="/Account/Login" class="nav-link">
+                <span class="bi bi-person-badge"></span> Login
+            </a>
+            <a href="/Account/Register" class="nav-link">
+                <span class="bi bi-person"></span> Register
+            </a>
+        </nav>
+    </NotAuthorized>
+</AuthorizeView>
+
 
 @code {
     private string? currentUrl;
@@ -106,6 +115,7 @@
     private bool isEmployee = false;
     private int pendingUserCount = 0;
     private System.Threading.Timer? timer;
+
 
     protected override async Task OnInitializedAsync()
     {

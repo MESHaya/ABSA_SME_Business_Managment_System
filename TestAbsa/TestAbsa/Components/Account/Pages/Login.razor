@@ -18,26 +18,30 @@
     <div class="col-md-4">
         <section>
             <StatusMessage Message="@errorMessage" />
-       <EditForm Model="Input" OnValidSubmit="LoginUser" FormName="loginForm">
-    <DataAnnotationsValidator />
-    <ValidationSummary class="text-danger" />
-    <div class="form-floating mb-3">
-        <InputText @bind-Value="Input.Email" class="form-control" autocomplete="username" placeholder="Email" />
-        <label>Email</label>
-        <ValidationMessage For="() => Input.Email" class="text-danger" />
-    </div>
-    <div class="form-floating mb-3">
-        <InputText type="password" @bind-Value="Input.Password" class="form-control" autocomplete="current-password" placeholder="Password" />
-        <label>Password</label>
-        <ValidationMessage For="() => Input.Password" class="text-danger" />
-    </div>
-    <div class="form-check mb-3">
-        <InputCheckbox @bind-Value="Input.RememberMe" class="form-check-input" />
-        <label class="form-check-label">Remember me</label>
-    </div>
-    <button type="submit" class="btn btn-primary w-100">Log in</button>
-</EditForm>
-
+            <EditForm Model="Input" OnValidSubmit="LoginUser" FormName="loginForm">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger" />
+                <div class="form-floating mb-3">
+                    <InputText @bind-Value="Input.Email" class="form-control" autocomplete="username" placeholder="Email" />
+                    <label>Email</label>
+                    <ValidationMessage For="() => Input.Email" class="text-danger" />
+                </div>
+                <div class="form-floating mb-3">
+                    <InputText type="password" @bind-Value="Input.Password" class="form-control" autocomplete="current-password" placeholder="Password" />
+                    <label>Password</label>
+                    <ValidationMessage For="() => Input.Password" class="text-danger" />
+                </div>
+                <div class="form-check mb-3">
+                    <InputCheckbox @bind-Value="Input.RememberMe" class="form-check-input" />
+                    <label class="form-check-label">Remember me</label>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Log in</button>
+            </EditForm>
+            
+            <div class="mt-3 text-center">
+                <p class="text-muted">Don't have an account?</p>
+                <a href="/Account/Register" class="btn btn-outline-primary w-100">Create an account</a>
+            </div>
         </section>
     </div>
     <div class="col-md-6 col-md-offset-2">
@@ -70,69 +74,68 @@
         }
     }
 
-  public async Task LoginUser()
-{
-    // Find the user by email or username (support both)
-    var user = await UserManager.FindByEmailAsync(Input.Email);
-    if (user == null)
+    public async Task LoginUser()
     {
-        user = await UserManager.FindByNameAsync(Input.Email);
-    }
-
-    if (user == null)
-    {
-        errorMessage = "Error: Invalid login attempt.";
-        return;
-    }
-
-    // Prevent login if not approved
-    if (!user.IsApproved)
-    {
-        errorMessage = "Error: Your account is pending approval. Please wait for a manager to approve your registration.";
-        Logger.LogWarning("User {Email} attempted to login but account is not approved.", Input.Email);
-        return;
-    }
-
-    // Authenticate using username (not email)
-    var result = await SignInManager.PasswordSignInAsync(
-        user.UserName, Input.Password, Input.RememberMe, lockoutOnFailure: false);
-
-    if (result.Succeeded)
-    {
-        Logger.LogInformation("User logged in successfully.");
-
-        var roles = await UserManager.GetRolesAsync(user);
-
-        if (roles.Contains("Manager"))
+        // Find the user by email or username (support both)
+        var user = await UserManager.FindByEmailAsync(Input.Email);
+        if (user == null)
         {
-            RedirectManager.RedirectTo(ReturnUrl ?? "/manager/dashboard");
+            user = await UserManager.FindByNameAsync(Input.Email);
         }
-        else if (roles.Contains("Employee"))
+
+        if (user == null)
         {
-            RedirectManager.RedirectTo(ReturnUrl ?? "/employee/dashboard");
+            errorMessage = "Error: Invalid login attempt.";
+            return;
+        }
+
+        // Prevent login if not approved
+        if (!user.IsApproved)
+        {
+            errorMessage = "Error: Your account is pending approval. Please wait for a manager to approve your registration.";
+            Logger.LogWarning("User {Email} attempted to login but account is not approved.", Input.Email);
+            return;
+        }
+
+        // Authenticate using username (not email)
+        var result = await SignInManager.PasswordSignInAsync(
+            user.UserName, Input.Password, Input.RememberMe, lockoutOnFailure: false);
+
+        if (result.Succeeded)
+        {
+            Logger.LogInformation("User logged in successfully.");
+
+            var roles = await UserManager.GetRolesAsync(user);
+
+            if (roles.Contains("Manager"))
+            {
+                RedirectManager.RedirectTo(ReturnUrl ?? "/manager/dashboard");
+            }
+            else if (roles.Contains("Employee"))
+            {
+                RedirectManager.RedirectTo(ReturnUrl ?? "/employee/dashboard");
+            }
+            else
+            {
+                RedirectManager.RedirectTo(ReturnUrl ?? "/");
+            }
+        }
+        else if (result.RequiresTwoFactor)
+        {
+            RedirectManager.RedirectTo(
+                "Account/LoginWith2fa",
+                new() { ["returnUrl"] = ReturnUrl, ["rememberMe"] = Input.RememberMe });
+        }
+        else if (result.IsLockedOut)
+        {
+            Logger.LogWarning("User account locked out.");
+            RedirectManager.RedirectTo("Account/Lockout");
         }
         else
         {
-            RedirectManager.RedirectTo(ReturnUrl ?? "/");
+            errorMessage = "Error: Invalid login attempt.";
         }
     }
-    else if (result.RequiresTwoFactor)
-    {
-        RedirectManager.RedirectTo(
-            "Account/LoginWith2fa",
-            new() { ["returnUrl"] = ReturnUrl, ["rememberMe"] = Input.RememberMe });
-    }
-    else if (result.IsLockedOut)
-    {
-        Logger.LogWarning("User account locked out.");
-        RedirectManager.RedirectTo("Account/Lockout");
-    }
-    else
-    {
-        errorMessage = "Error: Invalid login attempt.";
-    }
-}
-
 
     private sealed class InputModel
     {

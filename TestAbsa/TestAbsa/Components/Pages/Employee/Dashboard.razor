@@ -20,6 +20,7 @@
             <p class="text-muted">Overview of stock, finances, and quick tools</p>
         </div>
     </div>
+    </div>
 
     <!-- Quick Action Cards -->
     <div class="row g-4 mb-4">
@@ -49,19 +50,25 @@
             </div>
         </div>
 
-        <div class="col-md-4">
-            <div class="card h-100 text-center shadow-sm border-0">
-                <div class="card-body">
-                    <i class="fas fa-chart-line fa-3x text-primary mb-3"></i>
-                    <h5>Reports</h5>
-                    <p class="text-muted">Track performance and export summaries</p>
-                    <NavLink href="/employee/reports" class="btn btn-outline-primary btn-sm">
-                        Go to Reports
-                    </NavLink>
-                </div>
+ <div class="col-md-4">
+    <div class="card h-100 text-center shadow-sm border-0">
+        <div class="card-body">
+            <i class="fas fa-briefcase fa-3x text-primary mb-3"></i>
+            <h5>HR Functions</h5>
+            <p class="text-muted">Manage timesheets and leave requests</p>
+
+            <div class="d-flex flex-column gap-2 align-items-center">
+                <NavLink href="/employee/hr/timesheets" class="btn btn-outline-secondary btn-sm w-75">
+                    🕒 Timesheets
+                </NavLink>
+                <NavLink href="/employee/hr/leave-requests" class="btn btn-outline-success btn-sm w-75">
+                    📝 Leave Requests
+                </NavLink>
             </div>
         </div>
     </div>
+</div>
+
 
     <!-- Stock & Finance Section -->
     <div class="row g-4">

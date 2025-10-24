@@ -1,0 +1,346 @@
+﻿@page "/settings"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using TestAbsa.Data
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+@inject IDbContextFactory<ApplicationDbContext> DbContextFactory
+@attribute [Authorize]
+
+<PageTitle>Settings</PageTitle>
+
+<div class="container-fluid py-4">
+    <h2 class="mb-4">Settings</h2>
+
+    <div class="row">
+        <!-- Account Settings -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-person-circle"></i> Account Settings</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Full Name</label>
+                        <p class="text-muted">@currentUser?.FullName</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Email</label>
+                        <p class="text-muted">@currentUser?.Email</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Role</label>
+                        <p class="text-muted">
+                            @if (isManager)
+                            {
+                                <span class="badge bg-primary">Manager</span>
+                            }
+                            else if (isEmployee)
+                            {
+                                <span class="badge bg-secondary">Employee</span>
+                            }
+                        </p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Organization</label>
+                        <p class="text-muted">@organizationName</p>
+                    </div>
+                    <a href="/Account/Manage" class="btn btn-primary">
+                        <i class="bi bi-pencil"></i> Edit Profile
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Security Settings -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="bi bi-shield-lock"></i> Security</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Password</label>
+                        <p class="text-muted">••••••••</p>
+                        <a href="/Account/Manage/ChangePassword" class="btn btn-outline-warning btn-sm">
+                            <i class="bi bi-key"></i> Change Password
+                        </a>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Two-Factor Authentication</label>
+                        <p class="text-muted">Add an extra layer of security to your account</p>
+                        <a href="/Account/Manage/TwoFactorAuthentication" class="btn btn-outline-warning btn-sm">
+                            <i class="bi bi-shield-check"></i> Configure 2FA
+                        </a>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Active Sessions</label>
+                        <p class="text-muted">Last login: @(currentUser?.RegistrationDate.ToString("MMM dd, yyyy"))</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notification Settings -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-bell"></i> Notifications</h5>
+                </div>
+                <div class="card-body">
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="emailNotifications" checked>
+                        <label class="form-check-label" for="emailNotifications">
+                            Email Notifications
+                        </label>
+                        <small class="d-block text-muted">Receive updates via email</small>
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="inventoryAlerts" checked>
+                        <label class="form-check-label" for="inventoryAlerts">
+                            Inventory Alerts
+                        </label>
+                        <small class="d-block text-muted">Get notified about low stock</small>
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="financeAlerts">
+                        <label class="form-check-label" for="financeAlerts">
+                            Finance Updates
+                        </label>
+                        <small class="d-block text-muted">Transaction and budget alerts</small>
+                    </div>
+                    @if (isManager)
+                    {
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="approvalAlerts" checked>
+                            <label class="form-check-label" for="approvalAlerts">
+                                Approval Requests
+                            </label>
+                            <small class="d-block text-muted">New user and request notifications</small>
+                        </div>
+                    }
+                    <button class="btn btn-info mt-2" @onclick="SaveNotificationSettings">
+                        <i class="bi bi-check-circle"></i> Save Preferences
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Display Settings -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="bi bi-palette"></i> Display</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Theme</label>
+                        <select class="form-select" @onchange="ChangeTheme">
+                            <option value="light" selected>Light Mode</option>
+                           
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Language</label>
+                        <select class="form-select">
+                            <option selected>English</option>
+                            >
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Date Format</label>
+                        <select class="form-select">
+                            <option selected>DD/MM/YYYY</option>
+                            <option>MM/DD/YYYY</option>
+                            <option>YYYY-MM-DD</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (isManager)
+        {
+            <!-- Organization Settings (Manager Only) -->
+            <div class="col-md-12 mb-4">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="bi bi-building"></i> Organization Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Organization Name</label>
+                                <p class="text-muted">@organizationName</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Total Employees</label>
+                                <p class="text-muted">@totalEmployees users</p>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Business Hours</label>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <input type="time" class="form-control" value="08:00">
+                                    <small class="text-muted">Opening Time</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="time" class="form-control" value="17:00">
+                                    <small class="text-muted">Closing Time</small>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn btn-success">
+                            <i class="bi bi-save"></i> Update Organization
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Danger Zone -->
+        <div class="col-md-12 mb-4">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Danger Zone</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h6>Delete Account</h6>
+                        <p class="text-muted">Once you delete your account, there is no going back. Please be certain.</p>
+                        <button class="btn btn-outline-danger" @onclick="ShowDeleteConfirmation">
+                            <i class="bi bi-trash"></i> Delete My Account
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (showDeleteModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Confirm Account Deletion</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="() => showDeleteModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you absolutely sure you want to delete your account?</p>
+                    <p class="text-danger fw-bold">This action cannot be undone!</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="() => showDeleteModal = false">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="DeleteAccount">Yes, Delete My Account</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showSuccessMessage)
+{
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+        <div class="toast show" role="alert">
+            <div class="toast-header bg-success text-white">
+                <strong class="me-auto">Success</strong>
+                <button type="button" class="btn-close btn-close-white" @onclick="() => showSuccessMessage = false"></button>
+            </div>
+            <div class="toast-body">
+                Settings saved successfully!
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private ApplicationUser? currentUser;
+    private bool isManager = false;
+    private bool isEmployee = false;
+    private string organizationName = "Loading...";
+    private int totalEmployees = 0;
+    private bool showDeleteModal = false;
+    private bool showSuccessMessage = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            isManager = user.IsInRole("Manager");
+            isEmployee = user.IsInRole("Employee");
+
+            var userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                // Use our own context to fetch user data instead of UserManager
+                using (var context = await DbContextFactory.CreateDbContextAsync())
+                {
+                    currentUser = await context.Users.FindAsync(userId);
+                }
+                
+                if (currentUser?.OrganizationId != null)
+                {
+                    // Create a new context for organization lookup
+                    using (var context = await DbContextFactory.CreateDbContextAsync())
+                    {
+                        var org = await context.Organizations.FindAsync(currentUser.OrganizationId);
+                        organizationName = org?.Name ?? "Unknown Organization";
+                    }
+
+                    if (isManager)
+                    {
+                        // Create another context for the employee count
+                        using (var context = await DbContextFactory.CreateDbContextAsync())
+                        {
+                            totalEmployees = await context.Users.CountAsync(u => u.OrganizationId == currentUser.OrganizationId);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private void SaveNotificationSettings()
+    {
+        // TODO: Implement notification settings save to database
+        showSuccessMessage = true;
+        StateHasChanged();
+        
+        // Auto-hide after 3 seconds
+        Task.Delay(3000).ContinueWith(_ => 
+        {
+            showSuccessMessage = false;
+            InvokeAsync(StateHasChanged);
+        });
+    }
+
+    private void ChangeTheme(ChangeEventArgs e)
+    {
+        var theme = e.Value?.ToString();
+        // TODO: Implement theme change logic
+        showSuccessMessage = true;
+        StateHasChanged();
+    }
+
+    private void ShowDeleteConfirmation()
+    {
+        showDeleteModal = true;
+    }
+
+    private async Task DeleteAccount()
+    {
+        // TODO: Implement account deletion logic
+        showDeleteModal = false;
+        // For now, just redirect to home
+        NavigationManager.NavigateTo("/", forceLoad: true);
+    }
+}

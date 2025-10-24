@@ -93,18 +93,6 @@
     font-weight: 500;
 }
 
-.btn-logout[b-ma8lenznbn] {
-    background: none;
-    border: none;
-    color: #fff;
-    font-size: 1.1rem;
-    cursor: pointer;
-    transition: color 0.2s ease-in-out;
-}
-
-    .btn-logout:hover[b-ma8lenznbn] {
-        color: #e31837;
-    }
 
 /* Responsive */
 @media (max-width: 900px) {
@@ -129,4 +117,22 @@
     .page-title[b-ma8lenznbn] {
         margin: 0.5rem 0;
     }
+
+    .btn-logout[b-ma8lenznbn] {
+        background: none;
+        border: 1px solid #fff;
+        color: red;
+        font-size: 1.1rem;
+        cursor: pointer;
+        padding: 6px 10px;
+        border-radius: 8px;
+        transition: all 0.2s ease-in-out;
+    }
+
+        .btn-logout:hover[b-ma8lenznbn] {
+            background-color: #e31837;
+            color: #fff;
+            border-color: #e31837;
+        }
+
 }

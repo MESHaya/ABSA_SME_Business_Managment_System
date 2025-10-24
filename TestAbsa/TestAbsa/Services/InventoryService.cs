@@ -4,25 +4,23 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using TestAbsa.Data;
 using TestAbsa.Data.Models;
-using Microsoft.AspNetCore.Identity; //  For accessing ApplicationUser
-using Microsoft.AspNetCore.Http; // For accessing the current HttpContext/User
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Http;
+using System.Security.Claims;
 
 namespace TestAbsa.Services
 {
     public class InventoryService : IInventoryService
     {
         private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
-        private readonly UserManager<ApplicationUser> _userManager; //  For accessing ApplicationUser
-        private readonly IHttpContextAccessor _httpContextAccessor;  // For accessing the current HttpContext/User
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
         public InventoryService(
             IDbContextFactory<ApplicationDbContext> contextFactory,
-            UserManager<ApplicationUser> userManager,
             IHttpContextAccessor httpContextAccessor
             )
         {
             _contextFactory = contextFactory;
-            _userManager = userManager;
             _httpContextAccessor = httpContextAccessor;
         }
 
@@ -31,12 +29,22 @@ namespace TestAbsa.Services
             var user = _httpContextAccessor.HttpContext?.User;
             if (user == null || !user.Identity.IsAuthenticated)
             {
-                // In a secure application, this would be logged and redirect to login.
-                // For now, throw an exception to prevent accidental data leakage.
                 throw new InvalidOperationException("User context is unavailable. Authentication required.");
             }
 
-            var applicationUser = await _userManager.GetUserAsync(user);
+            // Get the user ID from claims
+            var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                throw new InvalidOperationException("User ID not found in claims.");
+            }
+
+            // Create a dedicated context to fetch user info
+            using var context = await _contextFactory.CreateDbContextAsync();
+            var applicationUser = await context.Users
+                .Where(u => u.Id == userId)
+                .Select(u => new { u.OrganizationId })
+                .FirstOrDefaultAsync();
 
             if (applicationUser == null || applicationUser.OrganizationId == 0)
             {
@@ -50,11 +58,11 @@ namespace TestAbsa.Services
 
         public async Task<List<Product>> GetAllProductsAsync(bool includeSuppliers = true)
         {
+            var orgId = await GetUserOrganizationIdAsync();
             using var context = await _contextFactory.CreateDbContextAsync();
-            var orgId = await GetUserOrganizationIdAsync(); // Fetch Org ID
 
             var query = context.Products
-                .Where(p => p.OrganizationId == orgId) // FILTER ADDED
+                .Where(p => p.OrganizationId == orgId)
                 .AsQueryable();
 
             if (includeSuppliers)
@@ -64,7 +72,6 @@ namespace TestAbsa.Services
 
             var products = await query.ToListAsync();
 
-            // Debugging info
             Console.WriteLine($"[InventoryService] Loaded {products.Count} products from the database.");
 
             foreach (var product in products)
@@ -77,14 +84,13 @@ namespace TestAbsa.Services
 
         public async Task<Product?> GetProductByIdAsync(int id)
         {
+            var orgId = await GetUserOrganizationIdAsync();
             using var context = await _contextFactory.CreateDbContextAsync();
-            var orgId = await GetUserOrganizationIdAsync(); // Fetch Org ID
 
             var product = await context.Products
                 .Include(p => p.Supplier)
-                .FirstOrDefaultAsync(p => p.Id == id && p.OrganizationId == orgId); //filter added
+                .FirstOrDefaultAsync(p => p.Id == id && p.OrganizationId == orgId);
 
-            //  Debugging info
             if (product == null)
             {
                 Console.WriteLine($"[InventoryService] No product found with ID: {id} for Organization {orgId}");
@@ -99,10 +105,10 @@ namespace TestAbsa.Services
 
         public async Task AddProductAsync(Product product)
         {
+            var orgId = await GetUserOrganizationIdAsync();
             using var context = await _contextFactory.CreateDbContextAsync();
-            var orgId = await GetUserOrganizationIdAsync(); // Fetch Org ID
 
-            product.OrganizationId = orgId; //  ORG ID SET
+            product.OrganizationId = orgId;
 
             context.Products.Add(product);
             await context.SaveChangesAsync();
@@ -110,36 +116,44 @@ namespace TestAbsa.Services
 
         public async Task UpdateProductAsync(Product product)
         {
-            // For maximum security, could retrieve entity first 
-            // and compare the OrganizationId, but the .Update() method is usually sufficient 
-            // because a malicious user would have had to retrieve the product first (which gets filtered).
+            var orgId = await GetUserOrganizationIdAsync();
             using var context = await _contextFactory.CreateDbContextAsync();
-            context.Products.Update(product);
-            await context.SaveChangesAsync();
-            // To make it more secure, can add 
-            // var orgId = await GetUserOrganizationIdAsync(); // Fetch Org ID
-            // product.OrganizationId = orgId; //  ORG ID SET
 
+            // Verify the product belongs to this organization
+            var existingProduct = await context.Products
+                .FirstOrDefaultAsync(p => p.Id == product.Id && p.OrganizationId == orgId);
+
+            if (existingProduct == null)
+                throw new InvalidOperationException("Product not found or access denied.");
+
+            // Ensure correct organization
+            product.OrganizationId = orgId;
+
+            // Copy updated values into the tracked entity instead of reattaching
+            context.Entry(existingProduct).CurrentValues.SetValues(product);
+
+            await context.SaveChangesAsync();
         }
+
 
         // --- Supplier Management ---
 
         public async Task<List<Supplier>> GetAllSuppliersAsync()
         {
+            var orgId = await GetUserOrganizationIdAsync();
             using var context = await _contextFactory.CreateDbContextAsync();
-            var orgId = await GetUserOrganizationIdAsync(); // Fetch Org ID
 
             return await context.Suppliers
-                .Where(s => s.OrganizationId == orgId) // FILTER ADDED
+                .Where(s => s.OrganizationId == orgId)
                 .ToListAsync();
         }
 
         public async Task AddSupplierAsync(Supplier supplier)
         {
+            var orgId = await GetUserOrganizationIdAsync();
             using var context = await _contextFactory.CreateDbContextAsync();
-            var orgId = await GetUserOrganizationIdAsync(); // Fetch Org ID
 
-            supplier.OrganizationId = orgId; // ORG ID SET
+            supplier.OrganizationId = orgId;
 
             context.Suppliers.Add(supplier);
             await context.SaveChangesAsync();
@@ -151,9 +165,10 @@ namespace TestAbsa.Services
         {
             try
             {
+                var orgId = await GetUserOrganizationIdAsync();
                 using var context = await _contextFactory.CreateDbContextAsync();
-                var orgId = await GetUserOrganizationIdAsync(); // Fetch Org ID
-                request.OrganizationId = orgId; // ORG ID SET
+
+                request.OrganizationId = orgId;
                 request.RequestDate = DateTime.UtcNow;
                 request.Status = "Pending";
 
@@ -168,11 +183,11 @@ namespace TestAbsa.Services
 
         public async Task<List<StockRequest>> GetPendingStockRequestsAsync()
         {
+            var orgId = await GetUserOrganizationIdAsync();
             using var context = await _contextFactory.CreateDbContextAsync();
-            var orgId = await GetUserOrganizationIdAsync(); // Fetch Org ID
 
             return await context.StockRequests
-                .Where(r => r.OrganizationId == orgId) // FILTER ADDED
+                .Where(r => r.OrganizationId == orgId)
                 .Where(r => r.Status == "Pending")
                 .Include(r => r.Product)
                 .OrderBy(r => r.RequestDate)
@@ -181,11 +196,11 @@ namespace TestAbsa.Services
 
         public async Task<List<StockRequest>> GetAllStockRequestsAsync()
         {
+            var orgId = await GetUserOrganizationIdAsync();
             using var context = await _contextFactory.CreateDbContextAsync();
-            var orgId = await GetUserOrganizationIdAsync(); // Fetch Org ID
 
             return await context.StockRequests
-                .Where(r => r.OrganizationId == orgId) // FILTER ADDED
+                .Where(r => r.OrganizationId == orgId)
                 .Include(r => r.Product)
                 .OrderByDescending(r => r.RequestDate)
                 .ToListAsync();
@@ -193,12 +208,11 @@ namespace TestAbsa.Services
 
         public async Task<List<StockRequest>> GetStockRequestsByEmployeeAsync(string employeeId)
         {
+            var orgId = await GetUserOrganizationIdAsync();
             using var context = await _contextFactory.CreateDbContextAsync();
-            var orgId = await GetUserOrganizationIdAsync(); // Fetch Org ID
 
-            // Filter by both OrganizationId AND EmployeeId for best security
             return await context.StockRequests
-                .Where(r => r.OrganizationId == orgId) // FILTER ADDED
+                .Where(r => r.OrganizationId == orgId)
                 .Include(r => r.Product)
                 .Where(r => r.EmployeeId == employeeId)
                 .OrderByDescending(r => r.RequestDate)
@@ -207,11 +221,12 @@ namespace TestAbsa.Services
 
         public async Task<bool> ReviewStockRequestAsync(int requestId, string status, string managerId, string managerName)
         {
+            var orgId = await GetUserOrganizationIdAsync();
             using var context = await _contextFactory.CreateDbContextAsync();
-            var orgId = await GetUserOrganizationIdAsync(); // Fetch Org ID
+
             var request = await context.StockRequests
                 .Include(r => r.Product)
-                .FirstOrDefaultAsync(r => r.Id == requestId);
+                .FirstOrDefaultAsync(r => r.Id == requestId && r.OrganizationId == orgId);
 
             if (request == null)
             {
@@ -225,9 +240,6 @@ namespace TestAbsa.Services
 
             if (status == "Approved" && request.Product != null)
             {
-                //Product is filtered/loaded via a request 
-                // that was already organization-filtered, so safe.
-                // Increase the product's inventory (CurrentStock)
                 request.Product.CurrentStock += request.Quantity;
                 context.Products.Update(request.Product);
             }
@@ -241,10 +253,10 @@ namespace TestAbsa.Services
 
         public async Task<int> CreatePurchaseOrderAsync(PurchaseOrder purchaseOrder)
         {
+            var orgId = await GetUserOrganizationIdAsync();
             using var context = await _contextFactory.CreateDbContextAsync();
-            var orgId = await GetUserOrganizationIdAsync(); // Fetch Org ID
-            purchaseOrder.OrganizationId = orgId; // ORG ID SET
-            // Auto-calculate total cost
+
+            purchaseOrder.OrganizationId = orgId;
             purchaseOrder.TotalCost = purchaseOrder.OrderedQuantity * purchaseOrder.UnitCost;
             purchaseOrder.OrderDate = DateTime.UtcNow;
             purchaseOrder.Status = "Ordered";
@@ -256,10 +268,11 @@ namespace TestAbsa.Services
 
         public async Task<List<PurchaseOrder>> GetAllPurchaseOrdersAsync()
         {
+            var orgId = await GetUserOrganizationIdAsync();
             using var context = await _contextFactory.CreateDbContextAsync();
-            var orgId = await GetUserOrganizationIdAsync(); // Fetch Org ID
+
             return await context.PurchaseOrders
-                .Where(p => p.OrganizationId == orgId) // FILTER ADDED
+                .Where(p => p.OrganizationId == orgId)
                 .Include(p => p.Supplier)
                 .Include(p => p.Product)
                 .OrderByDescending(p => p.OrderDate)
@@ -268,10 +281,11 @@ namespace TestAbsa.Services
 
         public async Task<PurchaseOrder?> GetPurchaseOrderByIdAsync(int id)
         {
+            var orgId = await GetUserOrganizationIdAsync();
             using var context = await _contextFactory.CreateDbContextAsync();
-            var orgId = await GetUserOrganizationIdAsync(); // Fetch Org ID
+
             return await context.PurchaseOrders
-                .Where(p => p.OrganizationId == orgId) // FILTER ADDED
+                .Where(p => p.OrganizationId == orgId)
                 .Include(p => p.Supplier)
                 .Include(p => p.Product)
                 .FirstOrDefaultAsync(p => p.Id == id);
@@ -279,10 +293,11 @@ namespace TestAbsa.Services
 
         public async Task<List<PurchaseOrder>> GetPurchaseOrdersByStatusAsync(string status)
         {
+            var orgId = await GetUserOrganizationIdAsync();
             using var context = await _contextFactory.CreateDbContextAsync();
-            var orgId = await GetUserOrganizationIdAsync(); // Fetch Org ID
+
             return await context.PurchaseOrders
-                .Where(p => p.OrganizationId == orgId) // FILTER ADDED
+                .Where(p => p.OrganizationId == orgId)
                 .Where(p => p.Status == status)
                 .Include(p => p.Supplier)
                 .Include(p => p.Product)
@@ -291,10 +306,11 @@ namespace TestAbsa.Services
 
         public async Task<List<PurchaseOrder>> GetPendingPurchaseOrdersAsync()
         {
+            var orgId = await GetUserOrganizationIdAsync();
             using var context = await _contextFactory.CreateDbContextAsync();
-            var orgId = await GetUserOrganizationIdAsync(); // Fetch Org ID
+
             return await context.PurchaseOrders
-                .Where(p => p.OrganizationId == orgId) // FILTER ADDED
+                .Where(p => p.OrganizationId == orgId)
                 .Where(p => p.Status == "Ordered" || p.Status == "Shipped")
                 .Include(p => p.Supplier)
                 .Include(p => p.Product)
@@ -303,17 +319,16 @@ namespace TestAbsa.Services
 
         public async Task<bool> UpdatePurchaseOrderStatusAsync(int id, string newStatus, DateTime? statusDate = null)
         {
+            var orgId = await GetUserOrganizationIdAsync();
             using var context = await _contextFactory.CreateDbContextAsync();
-            var orgId = await GetUserOrganizationIdAsync(); // Fetch Org ID
-            // Use FirstOrDefaultAsync with the OrganizationId filter
+
             var order = await context.PurchaseOrders.FirstOrDefaultAsync(p => p.Id == id && p.OrganizationId == orgId);
-      
+
             if (order == null)
                 return false;
 
             order.Status = newStatus;
 
-            // Update relevant date fields based on status
             switch (newStatus)
             {
                 case "Shipped":
@@ -323,7 +338,6 @@ namespace TestAbsa.Services
                     order.DeliveredDate = statusDate ?? DateTime.UtcNow;
                     break;
                 case "Cancelled":
-                    // No special date field for cancel, but could add one if needed
                     break;
             }
 
@@ -334,9 +348,10 @@ namespace TestAbsa.Services
 
         public async Task<bool> MarkAsShippedAsync(int id, DateTime shippedDate)
         {
+            var orgId = await GetUserOrganizationIdAsync();
             using var context = await _contextFactory.CreateDbContextAsync();
-            var orgId = await GetUserOrganizationIdAsync(); // Fetch Org ID
-            var order = await context.PurchaseOrders.FirstOrDefaultAsync(p => p.Id == id && p.OrganizationId == orgId); //FILTER ADDED
+
+            var order = await context.PurchaseOrders.FirstOrDefaultAsync(p => p.Id == id && p.OrganizationId == orgId);
             if (order == null)
                 return false;
 
@@ -350,25 +365,24 @@ namespace TestAbsa.Services
 
         public async Task<bool> ReceiveStockAsync(int id, int receivedQuantity, string managerId, string managerName)
         {
+            var orgId = await GetUserOrganizationIdAsync();
             using var context = await _contextFactory.CreateDbContextAsync();
-            var orgId = await GetUserOrganizationIdAsync(); // Fetch Org ID
+
             var order = await context.PurchaseOrders
                 .Include(p => p.Product)
-                .FirstOrDefaultAsync(p => p.Id == id && p.OrganizationId == orgId); // FILTER ADDED
+                .FirstOrDefaultAsync(p => p.Id == id && p.OrganizationId == orgId);
 
             if (order == null)
                 return false;
 
             order.ReceivedQuantity += receivedQuantity;
 
-            // Update product stock
             if (order.Product != null)
             {
                 order.Product.CurrentStock += receivedQuantity;
                 context.Products.Update(order.Product);
             }
 
-            // Determine new status
             if (order.ReceivedQuantity >= order.OrderedQuantity)
             {
                 order.Status = "Delivered";
@@ -386,10 +400,10 @@ namespace TestAbsa.Services
 
         public async Task<bool> ReportIssueAsync(int id, string issueNotes, string managerId)
         {
+            var orgId = await GetUserOrganizationIdAsync();
             using var context = await _contextFactory.CreateDbContextAsync();
-            var orgId = await GetUserOrganizationIdAsync(); // Fetch Org ID
 
-            var order = await context.PurchaseOrders.FirstOrDefaultAsync(p => p.Id == id && p.OrganizationId == orgId); // FILTER ADDED
+            var order = await context.PurchaseOrders.FirstOrDefaultAsync(p => p.Id == id && p.OrganizationId == orgId);
             if (order == null)
                 return false;
 
@@ -404,8 +418,9 @@ namespace TestAbsa.Services
 
         public async Task<bool> CancelPurchaseOrderAsync(int id, string reason)
         {
+            var orgId = await GetUserOrganizationIdAsync();
             using var context = await _contextFactory.CreateDbContextAsync();
-            var orgId = await GetUserOrganizationIdAsync(); // Fetch Org ID
+
             var order = await context.PurchaseOrders.FirstOrDefaultAsync(p => p.Id == id && p.OrganizationId == orgId);
             if (order == null)
                 return false;
@@ -417,5 +432,36 @@ namespace TestAbsa.Services
             await context.SaveChangesAsync();
             return true;
         }
+
+        public class InventorySummary
+        {
+            public int TotalProducts { get; set; }
+            public int LowStockItems { get; set; }
+            public int PendingStockRequests { get; set; }
+            public int PendingPurchaseOrders { get; set; }
+            public int TotalSuppliers { get; set; }
+        }
+
+        public async Task<InventorySummary> GetInventorySummaryAsync()
+        {
+            var orgId = await GetUserOrganizationIdAsync();
+            using var context = await _contextFactory.CreateDbContextAsync();
+
+            var totalProducts = await context.Products.CountAsync(p => p.OrganizationId == orgId);
+            var lowStockItems = await context.Products.CountAsync(p => p.OrganizationId == orgId && p.CurrentStock < p.MinLevel);
+            var pendingStockRequests = await context.StockRequests.CountAsync(r => r.OrganizationId == orgId && r.Status == "Pending");
+            var pendingPurchaseOrders = await context.PurchaseOrders.CountAsync(o => o.OrganizationId == orgId && (o.Status == "Ordered" || o.Status == "Shipped"));
+            var totalSuppliers = await context.Suppliers.CountAsync(s => s.OrganizationId == orgId);
+
+            return new InventorySummary
+            {
+                TotalProducts = totalProducts,
+                LowStockItems = lowStockItems,
+                PendingStockRequests = pendingStockRequests,
+                PendingPurchaseOrders = pendingPurchaseOrders,
+                TotalSuppliers = totalSuppliers
+            };
+        }
+
     }
 }

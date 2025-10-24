@@ -109,11 +109,12 @@
                             <InputSelect @bind-Value="newExpense.Category" 
                                          @onchange="@(() => LogFieldChange("Category", newExpense.Category.ToString()))"
                                          class="form-select">
-                                <option value="">-- Select Category --</option>
-                                @foreach (var category in Enum.GetValues<ExpenseCategory>())
-                                {
-                                    <option value="@category">@category</option>
-                                }
+                             <option value="">-- Select Category --</option>
+@foreach (var category in Enum.GetValues<ExpenseCategory>().Where(c => c != ExpenseCategory.None))
+{
+    <option value="@category">@category</option>
+}
+
                             </InputSelect>
                             <ValidationMessage For="@(() => newExpense.Category)" />
                         </div>
@@ -338,7 +339,7 @@
                 return;
             }
 
-            if (newExpense.Category == 0) // Assuming 0 is the default/unset value
+            if (newExpense.Category == ExpenseCategory.None) // Assuming 0 is the default/unset value
             {
                 errorMessage = "Category is required";
                 Console.WriteLine($"❌ Validation failed: Category is {newExpense.Category}");

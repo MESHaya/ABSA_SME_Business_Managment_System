@@ -1,11 +1,12 @@
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TestAbsa.Client.Pages;
 using TestAbsa.Components;
 using TestAbsa.Components.Account;
-using TestAbsa.Services;
 using TestAbsa.Data;
+using TestAbsa.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,6 +25,8 @@ builder.Services.AddScoped<AuthenticationStateProvider, PersistingRevalidatingAu
 // Register your Inventory Service
 builder.Services.AddScoped<TestAbsa.Services.IInventoryService, TestAbsa.Services.InventoryService>();
 builder.Services.AddScoped<IFinanceService, FinanceService>();
+builder.Services.AddScoped<IHRService, HRService>();
+
 
 
 builder.Services.AddAuthentication(options =>
@@ -106,7 +109,17 @@ app.MapRazorComponents<App>()
     .AddInteractiveWebAssemblyRenderMode()
     .AddAdditionalAssemblies(typeof(TestAbsa.Client._Imports).Assembly);
 
+// Add custom logout endpoint
+app.MapPost("/Account/Logout", async (
+    SignInManager<ApplicationUser> signInManager,
+    [FromForm] string? returnUrl) =>
+{
+    await signInManager.SignOutAsync();
+    return Results.Redirect("/");
+}).RequireAuthorization();
+
+
 // Add additional endpoints required by the Identity /Account Razor components.
-app.MapAdditionalIdentityEndpoints();
+//app.MapAdditionalIdentityEndpoints();
 
 app.Run();

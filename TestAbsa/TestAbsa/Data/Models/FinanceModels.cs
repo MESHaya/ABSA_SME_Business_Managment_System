@@ -111,6 +111,7 @@ namespace TestAbsa.Data.Models
     }
     public enum ExpenseCategory
     {
+        None = -1,  // Default unselected
         Office = 0,
         Travel = 1,
         Utilities = 2,
