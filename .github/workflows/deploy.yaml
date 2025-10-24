@@ -1,0 +1,84 @@
+name: CI/CD Pipeline for TestAbsa SME System
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  # The configuration (Release or Debug) to build
+  BUILD_CONFIGURATION: 'Release' 
+  # Path to the main solution file
+  SOLUTION_FILE_PATH: 'TestAbsa.sln' 
+  # Name of the project to publish (e.g., the server project)
+  PROJECT_NAME: 'TestAbsa/TestAbsa.csproj' 
+  # .NET SDK Version
+  DOTNET_VERSION: '8.0.x' 
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 1. Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: 2. Setup .NET Core SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: 3. Restore Dependencies
+      run: dotnet restore ${{ env.SOLUTION_FILE_PATH }}
+
+    # -----------------------------------------------------------
+    # CI STAGE: BUILD & TEST
+    # -----------------------------------------------------------
+      
+    - name: 4. Build Application
+      run: dotnet build ${{ env.SOLUTION_FILE_PATH }} --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore
+
+    - name: 5. Run Unit Tests (Optional)
+      # Uncomment and update the project path if you have a separate Test project (e.g., TestAbsa.Tests.csproj)
+      # run: dotnet test TestAbsa.Tests/TestAbsa.Tests.csproj --configuration ${{ env.BUILD_CONFIGURATION }} --no-build
+      run: echo "Skipping tests, no dedicated test project found."
+
+    # -----------------------------------------------------------
+    # CD STAGE: PUBLISH ARTIFACT
+    # -----------------------------------------------------------
+      
+    - name: 6. Publish Application
+      # Publishes the main server project for deployment
+      run: dotnet publish ${{ env.PROJECT_NAME }} --configuration ${{ env.BUILD_CONFIGURATION }} --output ${{ github.workspace }}/app/publish
+
+    - name: 7. Upload Build Artifact
+      # Uploads the published files so they can be downloaded and deployed to your server (AWS, Azure, etc.)
+      uses: actions/upload-artifact@v4
+      with:
+        name: testabsa-release
+        path: ${{ github.workspace }}/app/publish
+        if-no-files-found: error # Fail the build if no files are found
+
+  # -----------------------------------------------------------
+  # OPTIONAL: DEPLOY STAGE (Example for Azure)
+  # -----------------------------------------------------------
+  # deploy-to-azure:
+  #   needs: build-and-publish
+  #   runs-on: ubuntu-latest
+  #   environment: Production
+  #   steps:
+  #     - name: Download Artifact
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: testabsa-release
+        
+  #     - name: Deploy to Azure Web App
+  #       uses: azure/webapps-deploy@v3
+  #       with:
+  #         app-name: 'Your-Azure-App-Name'
+  #         slot-name: 'Production'
+  #         publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }} 
+  #         package: . # The artifact content is the package to deploy
