@@ -1,24 +1,28 @@
 {
   "Files": [
     {
-      "Id": "C:\\Users\\USER-PC\\Desktop\\WI\\ABSA_SME_Business_Managment_System\\TestAbsa\\TestAbsa\\obj\\Debug\\net8.0\\scopedcss\\projectbundle\\TestAbsa.bundle.scp.css",
+      "Id": "C:\\Users\\USER-PC\\Desktop\\New WI\\ABSA_SME_Business_Managment_System\\TestAbsa\\TestAbsa\\obj\\Debug\\net8.0\\scopedcss\\projectbundle\\TestAbsa.bundle.scp.css",
       "PackagePath": "staticwebassets\\TestAbsa.n5tthz6o8v.bundle.scp.css"
     },
     {
-      "Id": "C:\\Users\\USER-PC\\Desktop\\WI\\ABSA_SME_Business_Managment_System\\TestAbsa\\TestAbsa\\wwwroot\\app.css",
+      "Id": "C:\\Users\\USER-PC\\Desktop\\New WI\\ABSA_SME_Business_Managment_System\\TestAbsa\\TestAbsa\\wwwroot\\app.css",
       "PackagePath": "staticwebassets\\app.css"
     },
     {
-      "Id": "C:\\Users\\USER-PC\\Desktop\\WI\\ABSA_SME_Business_Managment_System\\TestAbsa\\TestAbsa\\wwwroot\\bootstrap\\bootstrap.min.css",
+      "Id": "C:\\Users\\USER-PC\\Desktop\\New WI\\ABSA_SME_Business_Managment_System\\TestAbsa\\TestAbsa\\wwwroot\\bootstrap\\bootstrap.min.css",
       "PackagePath": "staticwebassets\\bootstrap\\bootstrap.min.css"
     },
     {
-      "Id": "C:\\Users\\USER-PC\\Desktop\\WI\\ABSA_SME_Business_Managment_System\\TestAbsa\\TestAbsa\\wwwroot\\bootstrap\\bootstrap.min.css.map",
+      "Id": "C:\\Users\\USER-PC\\Desktop\\New WI\\ABSA_SME_Business_Managment_System\\TestAbsa\\TestAbsa\\wwwroot\\bootstrap\\bootstrap.min.css.map",
       "PackagePath": "staticwebassets\\bootstrap\\bootstrap.min.css.map"
     },
     {
-      "Id": "C:\\Users\\USER-PC\\Desktop\\WI\\ABSA_SME_Business_Managment_System\\TestAbsa\\TestAbsa\\wwwroot\\favicon.png",
+      "Id": "C:\\Users\\USER-PC\\Desktop\\New WI\\ABSA_SME_Business_Managment_System\\TestAbsa\\TestAbsa\\wwwroot\\favicon.png",
       "PackagePath": "staticwebassets\\favicon.png"
+    },
+    {
+      "Id": "C:\\Users\\USER-PC\\Desktop\\New WI\\ABSA_SME_Business_Managment_System\\TestAbsa\\TestAbsa\\wwwroot\\js\\site.js",
+      "PackagePath": "staticwebassets\\js\\site.js"
     },
     {
       "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.TestAbsa.Microsoft.AspNetCore.StaticWebAssetEndpoints.props",
