@@ -131,15 +131,29 @@ else
     private async Task LoadManagerEmails()
     {
         using var context = await DbContextFactory.CreateDbContextAsync();
-        var managerIds = await context.Users
-            .Where(u => u.ApprovedByManagerId != null || u.RejectedByManagerId != null || u.FiredByManagerId != null)
-            .SelectMany(u => new[] { u.ApprovedByManagerId, u.RejectedByManagerId, u.FiredByManagerId })
-            .Distinct()
-            .Where(id => id != null)
+
+        var allManagerIdsQuery = await context.Users
+            .Select(u => new
+            {
+                u.ApprovedByManagerId,
+                u.RejectedByManagerId,
+                u.FiredByManagerId
+            })
+            // Execute the query to pull the data into memory (client-side)
             .ToListAsync();
 
+        // LINQ-to-Objects (client-side) to combine and clean the IDs.
+        // The query is now executed in C# code, not SQL.
+        var uniqueManagerIds = allManagerIdsQuery
+            // Use SelectMany to flatten the anonymous object into a sequence of all IDs
+            .SelectMany(ids => new[] { ids.ApprovedByManagerId, ids.RejectedByManagerId, ids.FiredByManagerId })
+            .Where(id => id != null)
+            .Distinct()
+            .ToList();
+
+        // fetch the manager emails 
         var managers = await context.Users
-            .Where(u => managerIds.Contains(u.Id))
+            .Where(u => uniqueManagerIds.Contains(u.Id))
             .Select(u => new { u.Id, u.Email })
             .ToListAsync();
 
