@@ -141,7 +141,7 @@
             return;
         }
 
-        // 🛑 NEW CHECK: Prevent duplicate registration for approved, active users in the same organization
+        // Prevent duplicate registration for approved, active users in the same organization
         var existingUser = await Context.Users
             .OfType<ApplicationUser>()
             .FirstOrDefaultAsync(u =>

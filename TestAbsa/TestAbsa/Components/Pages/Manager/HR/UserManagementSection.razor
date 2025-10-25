@@ -12,7 +12,13 @@
 @inject NavigationManager NavigationManager
 
 <h3>User Management</h3>
-
+@if (!string.IsNullOrEmpty(statusMessage))
+{
+    <div class="alert @(statusMessage.StartsWith("Error") ? "alert-danger" : "alert-success") alert-dismissible fade show" role="alert">
+        @statusMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" @onclick="() => statusMessage = null"></button>
+    </div>
+}
 <div class="mb-3">
     <button class="btn @(currentView == UserViewType.Pending ? "btn-primary" : "btn-outline-primary") me-2" @onclick="() => ToggleUserView(UserViewType.Pending)">Pending Approvals</button>
     <button class="btn @(currentView == UserViewType.ApprovedActive ? "btn-primary" : "btn-outline-primary") me-2" @onclick="() => ToggleUserView(UserViewType.ApprovedActive)">Active Users</button>
@@ -112,6 +118,7 @@ else
     private string? userToFireId;
     private string managerPassword = string.Empty;
     private string fireErrorMessage = string.Empty;
+    private string? statusMessage;
 
     protected override async Task OnInitializedAsync()
     {
@@ -174,6 +181,14 @@ else
         var user = await UserManager.FindByIdAsync(id);
         if (user == null) return;
 
+        var isEmailConfirmed = await UserManager.IsEmailConfirmedAsync(user);
+        if (!isEmailConfirmed)
+        {
+            // Email not confirmed: set a message and stop the process
+              statusMessage = $"Error: Cannot approve user '{user.Email}'. Email address is not confirmed.";
+            return;
+        }
+
         user.IsApproved = true;
         // Set IsActive to true upon approval
         user.IsActive = true;
@@ -189,7 +204,16 @@ else
         user.FiredByManagerId = null;
         user.FiredDate = null;
 
-        await UserManager.UpdateAsync(user);
+        var result = await UserManager.UpdateAsync(user);
+
+        if (result.Succeeded)
+        {
+            statusMessage = $"User {user.Email} successfully approved.";
+        }
+        else
+        {
+            statusMessage = $"Error updating user {user.Email}: {string.Join(", ", result.Errors.Select(e => e.Description))}";
+        }
         await ToggleUserView(currentView);
     }
 
