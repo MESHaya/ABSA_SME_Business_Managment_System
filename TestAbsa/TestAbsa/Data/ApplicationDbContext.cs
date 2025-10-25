@@ -122,6 +122,21 @@ namespace TestAbsa.Data
                 .HasForeignKey(u => u.ApprovedByManagerId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            builder.Entity<ApplicationUser>()
+                .HasOne(u => u.RejectedByManager)
+                .WithMany()
+                .HasForeignKey(u => u.RejectedByManagerId)
+                .IsRequired(false) // Explicitly set IsRequired(false) for nullable FKs
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<ApplicationUser>()
+                .HasOne(u => u.FiredByManager)
+                .WithMany()
+                .HasForeignKey(u => u.FiredByManagerId)
+                .IsRequired(false) // Explicitly set IsRequired(false) for nullable FKs
+                .OnDelete(DeleteBehavior.Restrict);
+
+
             // --- TimesheetEntry Configuration ---
             builder.Entity<TimesheetEntry>()
                 .HasOne(t => t.Employee)

@@ -7,6 +7,7 @@ using TestAbsa.Components;
 using TestAbsa.Components.Account;
 using TestAbsa.Data;
 using TestAbsa.Services;
+using Microsoft.AspNetCore.Identity.UI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,7 +20,17 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, PersistingRevalidatingAuthenticationStateProvider>();
+//Register the simpler IEmailSender interface that your custom service implements.
 
+// concrete implementation against the non-generic IEmailSender interface.
+//    (This is the interface implemented by your custom 'EmailSender' class)
+builder.Services.AddScoped<IEmailSender, EmailSender>();
+
+//  Register the IEmailSender<ApplicationUser> required by Identity.
+//    Use a (lambda) to explicitly resolve the non-generic IEmailSender
+//    and cast it to the generic IEmailSender<ApplicationUser> required by Identity.
+builder.Services.AddScoped<IEmailSender<ApplicationUser>>(sp =>
+    (IEmailSender<ApplicationUser>)sp.GetRequiredService<IEmailSender>());
 
 
 // Register your Inventory Service
@@ -63,6 +74,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
     .AddDefaultTokenProviders();
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+builder.Services.AddSingleton<Microsoft.AspNetCore.Identity.UI.Services.IEmailSender, TestAbsa.Services.EmailSender>();
 
 // Add authorization policies
 builder.Services.AddAuthorizationCore(options =>

@@ -17,7 +17,7 @@ namespace TestAbsa.Data
         // Role selection
         public string UserRole { get; set; } = "Employee"; // "Manager" or "Employee"
 
-        // Approval system for employees
+        // Approval system
         public bool IsApproved { get; set; } = false;
         public string? ApprovedByManagerId { get; set; }
         public DateTime? ApprovedDate { get; set; }
@@ -37,9 +37,15 @@ namespace TestAbsa.Data
         public int OrganizationId { get; set; }
         public Organization Organization { get; set; } = null!; // Navigation property
 
-        // --- Future Account Status Field ---
-        // Field for whether the user is still active or not
+        //  Firing/Soft-Delete Tracking
+        public bool IsFired { get; set; } = false;
+        public string? FiredByManagerId { get; set; }
+        public DateTime? FiredDate { get; set; }
+        public virtual ApplicationUser? FiredByManager { get; set; }
+
+
+        // --- Account Status Field ---
+        // Field for whether the user is still active or not. Only set to false on rejection or firing/deletion.
         public bool IsActive { get; set; } = true;
     }
-
 }
