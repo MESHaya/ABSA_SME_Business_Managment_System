@@ -5,11 +5,20 @@
 @using TestAbsa.Data
 @rendermode InteractiveServer
 @inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
 @inject IDbContextFactory<ApplicationDbContext> DbContextFactory
 @inject ILogger<UserManagementSection> Logger
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
 
 <h3>User Management</h3>
+
+<div class="mb-3">
+    <button class="btn @(currentView == UserViewType.Pending ? "btn-primary" : "btn-outline-primary") me-2" @onclick="() => ToggleUserView(UserViewType.Pending)">Pending Approvals</button>
+    <button class="btn @(currentView == UserViewType.ApprovedActive ? "btn-primary" : "btn-outline-primary") me-2" @onclick="() => ToggleUserView(UserViewType.ApprovedActive)">Active Users</button>
+    <button class="btn @(currentView == UserViewType.FiredInactive ? "btn-primary" : "btn-outline-primary") me-2" @onclick="() => ToggleUserView(UserViewType.FiredInactive)">Fired Users</button>
+    <button class="btn @(currentView == UserViewType.Rejected ? "btn-primary" : "btn-outline-primary")" @onclick="() => ToggleUserView(UserViewType.Rejected)">Rejected Users</button>
+</div>
 
 @if (isLoading)
 {
@@ -17,64 +26,143 @@
 }
 else
 {
+        @if (userToFireId is not null)
+        {
+
+            <div class="alert alert-danger" role="alert">
+                <h4 class="alert-heading">Confirm Firing User: @(currentUsers.FirstOrDefault(u => u.Id == userToFireId)?.Email)</h4>
+                <p>To authorize the firing of this user, please re-authenticate by entering your password.</p>
+                <div class="input-group mb-2">
+                    <input type="password" class="form-control" placeholder="Your Password" @bind="managerPassword" />
+                    <button class="btn btn-danger" @onclick="ConfirmFireUser">Confirm Fire</button>
+                </div>
+                <button class="btn btn-secondary btn-sm" @onclick="CancelFireUser">Cancel</button>
+                @if (!string.IsNullOrEmpty(fireErrorMessage))
+                {
+                    <div class="text-danger mt-2">@fireErrorMessage</div>
+                }
+            </div>
+        }
     <table class="table table-hover">
         <thead>
             <tr>
-                <th>Email</th>
-                <th>Status</th>
-                <th>Manager</th>
-                <th>Action</th>
+                    <th>Full Name</th>
+                    <th>Email</th>
+                    <th>Status</th>
+                    <th>Role</th>
+                    <th>Manager</th>
+                    <th>Action</th>
             </tr>
         </thead>
         <tbody>
-            @foreach (var user in currentUsers)
-            {
-                <tr>
-                    <td>@user.Email</td>
-                    <td>@(user.IsApproved ? "Approved" : user.IsRejected ? "Rejected" : "Pending")</td>
-                    <td>@GetManagerEmail(user)</td>
-                    <td>
-                        @if (!user.IsApproved && !user.IsRejected)
-                        {
-                            <button class="btn btn-success btn-sm me-1" @onclick="() => ApproveUser(user.Id)">Approve</button>
-                            <button class="btn btn-danger btn-sm" @onclick="() => RejectUser(user.Id)">Reject</button>
-                        }
-                    </td>
-                </tr>
-            }
+                    @foreach (var user in currentUsers)
+                    {
+                        <tr>
+                            <td>@user.FullName</td>
+                            <td>@user.Email</td>
+                            <td>
+                                @if (!user.IsApproved && !user.IsRejected)
+                                {
+                                    <span>Pending</span>
+                                }
+                                else if (user.IsRejected)
+                                {
+                                    <span>Rejected</span>
+                                }
+                                else if (user.IsActive)
+                                {
+                                    <span class="badge bg-success">Active</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning text-dark">Fired (Inactive)</span>
+                                }
+                            </td>
+                            <td>@user.UserRole</td>
+                            <td>@GetManagerEmail(user)</td>
+                            <td>
+                                @if (!user.IsApproved && !user.IsRejected)
+                                {
+                                    <button class="btn btn-success btn-sm me-1" @onclick="() => ApproveUser(user.Id)">Approve</button>
+                                    <button class="btn btn-danger btn-sm" @onclick="() => RejectUser(user.Id)">Reject</button>
+                                }
+                                else if (user.IsApproved && user.IsActive)
+                                {
+                                    <button class="btn btn-danger btn-sm" @onclick="() => PrepareFireUser(user.Id)">Fire</button>
+                                }
+                                else if (user.IsApproved && !user.IsActive)
+                                {
+                                    <button class="btn btn-success btn-sm" @onclick="() => RestoreUser(user.Id)">Restore</button>
+                                }
+                            </td>
+                        </tr>
+                    }
         </tbody>
     </table>
 }
 
 @code {
-    private enum UserViewType { Pending, Approved, Rejected }
+    private enum UserViewType { Pending, ApprovedActive, FiredInactive, Rejected }
 
     private List<ApplicationUser> currentUsers = new();
     private Dictionary<string, string> managerEmails = new();
     private bool isLoading = true;
+    private UserViewType currentView = UserViewType.Pending;
+
+    private string? userToFireId;
+    private string managerPassword = string.Empty;
+    private string fireErrorMessage = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadManagerEmails();
         await ToggleUserView(UserViewType.Pending);
         isLoading = false;
     }
 
+    // Helper to load manager emails for display
+    private async Task LoadManagerEmails()
+    {
+        using var context = await DbContextFactory.CreateDbContextAsync();
+        var managerIds = await context.Users
+            .Where(u => u.ApprovedByManagerId != null || u.RejectedByManagerId != null || u.FiredByManagerId != null)
+            .SelectMany(u => new[] { u.ApprovedByManagerId, u.RejectedByManagerId, u.FiredByManagerId })
+            .Distinct()
+            .Where(id => id != null)
+            .ToListAsync();
+
+        var managers = await context.Users
+            .Where(u => managerIds.Contains(u.Id))
+            .Select(u => new { u.Id, u.Email })
+            .ToListAsync();
+
+        managerEmails = managers.ToDictionary(m => m.Id, m => m.Email ?? "Unknown Manager");
+    }
+
     private async Task ToggleUserView(UserViewType view)
     {
+        currentView = view;
         using var context = await DbContextFactory.CreateDbContextAsync();
         currentUsers = view switch
         {
-            UserViewType.Approved => await context.Users.Where(u => u.IsApproved).ToListAsync(),
+            // Only show users who are approved AND active
+            UserViewType.ApprovedActive => await context.Users.Where(u => u.IsApproved && u.IsActive).ToListAsync(),
+            // Only show users who were approved BUT are inactive (i.e., fired)
+            UserViewType.FiredInactive => await context.Users.Where(u => u.IsApproved && !u.IsActive && u.IsFired).ToListAsync(),
+            // Show users marked as rejected
             UserViewType.Rejected => await context.Users.Where(u => u.IsRejected).ToListAsync(),
+            // Show users who are neither approved nor rejected (pending)
             _ => await context.Users.Where(u => !u.IsApproved && !u.IsRejected).ToListAsync()
         };
+        StateHasChanged();
     }
 
     private string GetManagerEmail(ApplicationUser user)
     {
-        if (string.IsNullOrEmpty(user.ApprovedByManagerId) && string.IsNullOrEmpty(user.RejectedByManagerId))
-            return "N/A";
-        var id = user.ApprovedByManagerId ?? user.RejectedByManagerId!;
+        // Prioritize FiredBy, then ApprovedBy, then RejectedBy
+        var id = user.FiredByManagerId ?? user.ApprovedByManagerId ?? user.RejectedByManagerId;
+        if (string.IsNullOrEmpty(id)) return "N/A";
+
         return managerEmails.TryGetValue(id, out var email) ? email : "Unknown";
     }
 
@@ -87,10 +175,22 @@ else
         if (user == null) return;
 
         user.IsApproved = true;
+        // Set IsActive to true upon approval
+        user.IsActive = true;
+
         user.ApprovedByManagerId = manager?.Id;
         user.ApprovedDate = DateTime.UtcNow;
+
+        // Clear rejection/firing flags
+        user.IsRejected = false;
+        user.RejectedByManagerId = null;
+        user.RejectedDate = null;
+        user.IsFired = false;
+        user.FiredByManagerId = null;
+        user.FiredDate = null;
+
         await UserManager.UpdateAsync(user);
-        await ToggleUserView(UserViewType.Pending);
+        await ToggleUserView(currentView);
     }
 
     private async Task RejectUser(string id)
@@ -104,7 +204,95 @@ else
         user.IsRejected = true;
         user.RejectedByManagerId = manager?.Id;
         user.RejectedDate = DateTime.UtcNow;
+
+        // Clear approval/firing flags and deactivate
+        user.IsApproved = false;
+        user.ApprovedByManagerId = null;
+        user.ApprovedDate = null;
+        user.IsActive = false; // Rejected users are inactive
+        user.IsFired = false;
+        user.FiredByManagerId = null;
+        user.FiredDate = null;
+
         await UserManager.UpdateAsync(user);
-        await ToggleUserView(UserViewType.Pending);
+        await ToggleUserView(currentView);
     }
+
+    //  Prepare to Fire User (Show Authentication Modal)
+    private void PrepareFireUser(string id)
+    {
+        userToFireId = id;
+        managerPassword = string.Empty;
+        fireErrorMessage = string.Empty;
+    }
+
+    //  Cancel Firing
+    private void CancelFireUser()
+    {
+        userToFireId = null;
+    }
+
+    //  Confirm Fire User (Requires Authentication)
+    private async Task ConfirmFireUser()
+    {
+        if (string.IsNullOrEmpty(userToFireId)) return;
+
+        var auth = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var manager = await UserManager.GetUserAsync(auth.User);
+
+        if (manager == null || manager.UserName == null)
+        {
+            fireErrorMessage = "Could not identify current manager.";
+            return;
+        }
+
+        // 1. Re-authenticate the manager
+        var signInResult = await SignInManager.CheckPasswordSignInAsync(manager, managerPassword, lockoutOnFailure: false);
+
+        if (!signInResult.Succeeded)
+        {
+            fireErrorMessage = "Authentication failed. Incorrect password.";
+            return;
+        }
+
+        // 2. Perform the 'Firing' (soft-delete/deactivate)
+        var userToFire = await UserManager.FindByIdAsync(userToFireId);
+        if (userToFire == null)
+        {
+            fireErrorMessage = "User to fire not found.";
+            return;
+        }
+
+        userToFire.IsActive = false;
+        userToFire.IsFired = true; // Mark as formally fired
+        userToFire.FiredDate = DateTime.UtcNow;
+        userToFire.FiredByManagerId = manager.Id;
+
+        await UserManager.UpdateAsync(userToFire);
+
+        // Reset state and refresh
+        userToFireId = null;
+        managerPassword = string.Empty;
+        fireErrorMessage = string.Empty;
+        await LoadManagerEmails(); // Refresh emails since a new firing manager might be present
+        await ToggleUserView(currentView);
+    }
+
+    //  Restore User
+    private async Task RestoreUser(string id)
+    {
+        var user = await UserManager.FindByIdAsync(id);
+        if (user == null) return;
+
+        if (user.IsApproved) // Only restore if the user was previously approved
+        {
+            user.IsActive = true;
+            user.IsFired = false; // Clear fired flag
+            user.FiredDate = null; // Clear Fired date
+            user.FiredByManagerId = null; // Clear Fired By
+            await UserManager.UpdateAsync(user);
+            await ToggleUserView(currentView);
+        }
+    }
+   
 }

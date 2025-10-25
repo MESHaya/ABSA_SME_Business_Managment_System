@@ -33,9 +33,15 @@
             <ValidationSummary class="text-danger" role="alert" />
 
             <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.FullName" class="form-control" autocomplete="name" aria-required="true" placeholder="John Doe" />
-                <label for="full-name">Full Name</label>
-                <ValidationMessage For="() => Input.FullName" class="text-danger" />
+                <InputText @bind-Value="Input.FirstName" class="form-control" autocomplete="given-name" aria-required="true" placeholder="John" />
+                <label for="first-name">First Name</label>
+                <ValidationMessage For="() => Input.FirstName" class="text-danger" />
+            </div>
+
+            <div class="form-floating mb-3">
+                <InputText @bind-Value="Input.LastName" class="form-control" autocomplete="family-name" aria-required="true" placeholder="Doe" />
+                <label for="last-name">Last Name</label>
+                <ValidationMessage For="() => Input.LastName" class="text-danger" />
             </div>
 
             <div class="form-floating mb-3">
@@ -81,15 +87,15 @@
                 <ValidationMessage For="() => Input.Role" class="text-danger" />
             </div>
 
-            @if (Input.Role == "Employee")
-            {
-                <div class="alert alert-info" role="alert">
-                    <i class="bi bi-info-circle"></i> Employee accounts require manager approval before you can sign in.
-                </div>
-            }
+            <div class="alert alert-info" role="alert">
+                <i class="bi bi-info-circle"></i> All accounts require administrator approval before you can sign in.
+            </div>
 
             <button type="submit" class="w-100 btn btn-lg btn-primary" disabled="@(Organizations.Count == 0)">Register</button>
         </EditForm>
+        <p class="mt-3">
+            <a href="/?returnUrl=@ReturnUrl">Already have an account? Log in</a>
+        </p>
     </div>
     <div class="col-md-6 col-md-offset-2">
         <section>
@@ -109,56 +115,103 @@
     [SupplyParameterFromQuery]
     private string? ReturnUrl { get; set; }
 
-    //  Property to hold the list of organizations for the dropdown
+    // Property to hold the list of organizations for the dropdown
     private List<Organization> Organizations { get; set; } = new List<Organization>();
 
     private string? Message => identityErrors is null ? null : $"Error: {string.Join(", ", identityErrors.Select(error => error.Description))}";
 
-    //  Fetch organizations on component initialization
+    // Fetch organizations on component initialization
     protected override async Task OnInitializedAsync()
     {
         Organizations = await Context.Organizations.OrderBy(o => o.Name).ToListAsync();
     }
 
+    private string GenerateUniqueRandomCode()
+    {
+        // Generates a 5-digit number (10000 to 99999) and formats it as a 5-digit string.
+        return new Random().Next(10000, 99999).ToString("D5");
+    }
+
     public async Task RegisterUser(EditContext editContext)
     {
-        //  Validate and Parse Organization ID
+        // Validate and Parse Organization ID
         if (!int.TryParse(Input.SelectedOrganizationId, out int orgId) || orgId <= 0)
         {
             identityErrors = new[] { new IdentityError { Description = "Please select a valid organization." } };
             return;
         }
 
-        //  Create ApplicationUser
+        // 🛑 NEW CHECK: Prevent duplicate registration for approved, active users in the same organization
+        var existingUser = await Context.Users
+            .OfType<ApplicationUser>()
+            .FirstOrDefaultAsync(u =>
+                u.Email == Input.Email &&
+                u.OrganizationId == orgId &&
+                u.IsApproved &&   // Must be approved
+                u.IsActive);      // Must be currently active (not fired)
+
+        if (existingUser != null)
+        {
+            identityErrors = new[] { new IdentityError { Description = $"An approved and active account with the email '{Input.Email}' already exists in this organization." } };
+            return;
+        }
+
+
+        // Create ApplicationUser
         var user = CreateUser();
 
-        //   Assign the selected Organization ID to the user
+        // Assign the selected Organization ID to the user
         user.OrganizationId = orgId;
 
         // Set full name, role, and registration date
-        user.FullName = Input.FullName;
+        user.FirstName = Input.FirstName.Trim();
+        user.LastName = Input.LastName.Trim();
+        user.FullName = $"{Input.FirstName.Trim()} {Input.LastName.Trim()}";
         user.UserRole = Input.Role;
         user.RegistrationDate = DateTime.UtcNow;
 
-        // Managers are auto-approved, employees need approval
-        if (Input.Role == "Manager")
+        // All users need approval
+        user.IsApproved = false;
+        // Set IsActive to true initially
+        user.IsActive = true;
+
+        // Generate unique Username
+        string rolePrefix = Input.Role[0].ToString().ToUpperInvariant(); // E or M
+        string baseUsername = (rolePrefix + Input.FirstName)
+            .Replace(" ", "") // Remove spaces from first name
+            .ToLowerInvariant(); // Lowercase for consistency
+
+        string generatedUsername;
+        bool isUnique = false;
+        int maxAttempts = 10;
+        int attempt = 0;
+
+        do
         {
-            user.IsApproved = true;
-            user.ApprovedDate = DateTime.UtcNow;
-        }
-        else
+            string randomCode = GenerateUniqueRandomCode();
+            generatedUsername = baseUsername + randomCode;
+
+            // Check if user already exists with this username
+            if (await UserManager.FindByNameAsync(generatedUsername) == null)
+            {
+                isUnique = true;
+            }
+            attempt++;
+        } while (!isUnique && attempt < maxAttempts);
+
+        if (!isUnique)
         {
-            user.IsApproved = false;
+            identityErrors = new[] { new IdentityError { Description = "Could not generate a unique username. Please try again." } };
+            return;
         }
 
-        //  Set username
-        await UserStore.SetUserNameAsync(user, Input.FullName, CancellationToken.None);
-
-        //  Still store their email separately
+        // Set the generated unique username
+        await UserStore.SetUserNameAsync(user, generatedUsername, CancellationToken.None);
+        // Still store their email separately
         var emailStore = GetEmailStore();
         await emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
 
-        //  Create user in Identity
+        // Create user in Identity
         var result = await UserManager.CreateAsync(user, Input.Password);
 
         if (!result.Succeeded)
@@ -167,12 +220,12 @@
             return;
         }
 
-        Logger.LogInformation("User created a new account with password. Role: {Role}, Organization ID: {OrganizationId}", Input.Role, user.OrganizationId);
+        Logger.LogInformation("User created a new account with password. Username: {Username}, Role: {Role}, Organization ID: {OrganizationId}", generatedUsername, Input.Role, user.OrganizationId);
 
-        //  Add to role
+        // Add to role
         await UserManager.AddToRoleAsync(user, Input.Role);
 
-        //  Email confirmation setup (same as before)
+        // Email confirmation setup (same as before)
         var userId = await UserManager.GetUserIdAsync(user);
         var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
         code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
@@ -182,25 +235,10 @@
 
         await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
 
-        // ✅ Handle post-registration flow
-        if (Input.Role == "Manager")
-        {
-            if (UserManager.Options.SignIn.RequireConfirmedAccount)
-            {
-                RedirectManager.RedirectTo(
-                    "Account/RegisterConfirmation",
-                    new() { ["email"] = Input.Email, ["returnUrl"] = ReturnUrl });
-            }
-
-            await SignInManager.SignInAsync(user, isPersistent: false);
-            RedirectManager.RedirectTo(ReturnUrl);
-        }
-        else
-        {
-            RedirectManager.RedirectTo(
-                "Account/RegistrationPending",
-                new() { ["email"] = Input.Email });
-        }
+        // Handle post-registration flow
+        RedirectManager.RedirectTo(
+             "Account/RegisterConfirmation", // Changed to RegisterConfirmation based on standard flow
+             new() { ["email"] = Input.Email, ["returnUrl"] = ReturnUrl });
     }
 
     private ApplicationUser CreateUser()
@@ -228,15 +266,18 @@
     private sealed class InputModel
     {
         [Required]
-        [Display(Name = "Full Name")]
-        public string FullName { get; set; } = "";
+        [Display(Name = "First Name")]
+        public string FirstName { get; set; } = "";
 
-        // Added Field for the selected Organization ID (bound as a string from InputSelect)
+        [Required]
+        [Display(Name = "Last Name")]
+        public string LastName { get; set; } = "";
+
+        // Field for the selected Organization ID (bound as a string from InputSelect)
         [Required]
         [Range(1, int.MaxValue, ErrorMessage = "Please select an existing organization.")]
         [Display(Name = "Organization")]
         public string SelectedOrganizationId { get; set; } = "0";
-
 
         [Required]
         [EmailAddress]
