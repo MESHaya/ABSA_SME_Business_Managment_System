@@ -4,6 +4,7 @@
 @using Microsoft.AspNetCore.Identity
 @using TestAbsa.Data
 
+
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager
 @inject IdentityUserAccessor UserAccessor
@@ -15,6 +16,31 @@
 <h3>Profile</h3>
 <StatusMessage />
 
+
+
+<div class="mb-3">
+    @if (isManager)
+    {
+        <NavLink class="btn btn-outline-secondary" href="/manager/dashboard">
+            <span class="bi bi-arrow-left"></span> Back to Dashboard
+        </NavLink>
+    }
+    else if (isEmployee)
+    {
+        <NavLink class="btn btn-outline-secondary" href="/employee/dashboard">
+            <span class="bi bi-arrow-left"></span> Back to Dashboard
+        </NavLink>
+    }
+    else
+    {
+        <NavLink class="btn btn-outline-secondary" href="/">
+            <span class="bi bi-arrow-left"></span> Back to Home
+        </NavLink>
+    }
+</div>
+
+
+<h3>Profile</h3>
 <div class="row">
     <div class="col-md-6">
         <EditForm Model="Input" FormName="profile" OnValidSubmit="OnValidSubmitAsync" method="post">
@@ -54,6 +80,7 @@
     private string? username;
     private string? phoneNumber;
     private bool isEmployee = false;
+    private bool isManager = false;
      
 
     [CascadingParameter]
@@ -70,6 +97,7 @@
 
         Input.PhoneNumber ??= phoneNumber;
            isEmployee = await UserManager.IsInRoleAsync(user, "Employee");
+           isManager = await UserManager.IsInRoleAsync(user, "Manager");
     }
 
     private async Task OnValidSubmitAsync()
@@ -88,7 +116,23 @@
         RedirectManager.RedirectToCurrentPageWithStatus("Your profile has been updated", HttpContext);
     }
 
- 
+ private async Task NavigateToDashboard()
+{
+    var isManager = await UserManager.IsInRoleAsync(user, "Manager");
+    
+    if (isManager)
+    {
+        NavigationManager.NavigateTo("/manager/dashboard");
+    }
+    else if (isEmployee)
+    {
+        NavigationManager.NavigateTo("/employee/dashboard");
+    }
+    else
+    {
+        NavigationManager.NavigateTo("/");
+    }
+}
 
     private sealed class InputModel
     {

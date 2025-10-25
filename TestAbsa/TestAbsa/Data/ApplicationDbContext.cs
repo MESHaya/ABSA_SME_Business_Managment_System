@@ -207,10 +207,7 @@ namespace TestAbsa.Data
                 .Property(e => e.Description)
                 .IsRequired()
                 .HasMaxLength(500);
-<<<<<<< HEAD
 
-=======
->>>>>>> 7c2c669a7b130e2713eaae852acd901d6c6d0b8e
         }
     }
 }
