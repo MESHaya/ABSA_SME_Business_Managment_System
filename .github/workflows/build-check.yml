@@ -1,0 +1,47 @@
+name: .NET Core Build Check
+
+on:
+  push:
+    branches: [ "New-Working-App" ]
+  pull_request:
+    branches: [ "New-Working-App" ]
+
+jobs:
+  build:
+    # Changed from 'windows-latest' to 'ubuntu-latest' for standard .NET Core web applications
+    runs-on: ubuntu-latest 
+
+    strategy:
+      matrix:
+        # Check both standard build configurations
+        configuration: [Debug, Release]
+
+    env:
+      # Replaced placeholder with your solution name
+      Solution_Name: TestAbsa.sln
+
+    steps:
+    - name: 1. Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: 2. Setup .NET Core SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        # Use .NET 8.0 SDK
+        dotnet-version: 8.0.x
+
+    # Restore the application dependencies
+    - name: 3. Restore Dependencies
+      # Using standard 'dotnet restore' command
+      run: dotnet restore ${{ env.Solution_Name }}
+      
+    # Execute the build check
+    - name: 4. Build Application (${{ matrix.configuration }})
+      # Using standard 'dotnet build' command, skipping restore as it was done in step 3
+      run: dotnet build ${{ env.Solution_Name }} --configuration ${{ matrix.configuration }} --no-restore
+      
+    # Test step removed/simplified as requested to focus solely on compilation success
+    - name: 5. Run Unit Tests (Skipped)
+      run: echo "Skipping test execution as requested. Build success check complete."
