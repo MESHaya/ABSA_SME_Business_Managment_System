@@ -19,6 +19,12 @@
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" @onclick="() => statusMessage = null"></button>
     </div>
 }
+@if (!isLoading)
+{
+    <button class="btn btn-outline-secondary btn-sm mb-3" @onclick="ReloadPage">
+        🔄 Refresh Users
+    </button>
+}
 <div class="mb-3">
     <button class="btn @(currentView == UserViewType.Pending ? "btn-primary" : "btn-outline-primary") me-2" @onclick="() => ToggleUserView(UserViewType.Pending)">Pending Approvals</button>
     <button class="btn @(currentView == UserViewType.ApprovedActive ? "btn-primary" : "btn-outline-primary") me-2" @onclick="() => ToggleUserView(UserViewType.ApprovedActive)">Active Users</button>
@@ -87,16 +93,16 @@ else
                             <td>@user.UserRole</td>
                             <td>@GetManagerEmail(user)</td>
                             <td>
-                                @if (!user.IsApproved && !user.IsRejected)
+                                @if (!user.IsApproved && !user.IsRejected && user.OrganizationId == managerOrganizationId)
                                 {
                                     <button class="btn btn-success btn-sm me-1" @onclick="() => ApproveUser(user.Id)">Approve</button>
                                     <button class="btn btn-danger btn-sm" @onclick="() => RejectUser(user.Id)">Reject</button>
                                 }
-                                else if (user.IsApproved && user.IsActive)
+                                else if (user.IsApproved && user.IsActive && user.OrganizationId == managerOrganizationId)
                                 {
                                     <button class="btn btn-danger btn-sm" @onclick="() => PrepareFireUser(user.Id)">Fire</button>
                                 }
-                                else if (user.IsApproved && !user.IsActive)
+                                else if (user.IsApproved && !user.IsActive && user.OrganizationId == managerOrganizationId)
                                 {
                                     <button class="btn btn-success btn-sm" @onclick="() => RestoreUser(user.Id)">Restore</button>
                                 }
@@ -126,11 +132,65 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadCurrentManager();
-        await LoadManagerEmails();
-        await ToggleUserView(UserViewType.Pending);
-        isLoading = false;
+        try
+        {
+            isLoading = true;
+
+            await EnsureManagerLoadedAsync();
+
+            if (managerOrganizationId.HasValue)
+            {
+                await LoadManagerEmails();
+                await ToggleUserView(UserViewType.Pending);
+            }
+            else
+            {
+                Logger.LogWarning("Manager organization ID not found during initialization.");
+                currentUsers.Clear();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error initializing UserManagementSection");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
     }
+
+    private async Task EnsureManagerLoadedAsync()
+    {
+        if (currentManager != null && managerOrganizationId.HasValue)
+            return; // Already loaded and valid
+
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user?.Identity?.IsAuthenticated != true)
+        {
+            Logger.LogWarning("User not authenticated when attempting to load manager info.");
+            NavigationManager.NavigateTo("/login");
+            return;
+        }
+
+        var managerId = UserManager.GetUserId(user);
+        if (string.IsNullOrEmpty(managerId))
+        {
+            Logger.LogWarning("Unable to retrieve manager ID from claims.");
+            return;
+        }
+
+        currentManager = await UserManager.FindByIdAsync(managerId);
+        managerOrganizationId = currentManager?.OrganizationId;
+
+        if (!managerOrganizationId.HasValue)
+        {
+            Logger.LogWarning("Manager {ManagerId} has no OrganizationId.", managerId);
+        }
+    }
+
 
     private async Task LoadCurrentManager()
     {
@@ -265,6 +325,31 @@ else
         }
         await ToggleUserView(currentView);
     }
+
+    private async Task ReloadPage()
+    {
+        isLoading = true;
+        statusMessage = null;
+
+        try
+        {
+            await LoadCurrentManager();     // Ensure manager info is still valid
+            await LoadManagerEmails();      // Reload manager email dictionary
+            await ToggleUserView(currentView); // Refresh current user list
+            statusMessage = "✅ User list refreshed successfully.";
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Error refreshing users: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged(); // Force UI to update
+        }
+    }
+
+
 
     private async Task RejectUser(string id)
     {
