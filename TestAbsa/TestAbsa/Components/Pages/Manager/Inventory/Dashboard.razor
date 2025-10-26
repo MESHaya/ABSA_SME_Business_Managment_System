@@ -264,7 +264,6 @@
         </div>
     </div>
 </div>
-
 @code {
     private List<Product> Products { get; set; } = new List<Product>();
     private List<PurchaseOrder> recentPurchaseOrders = new List<PurchaseOrder>();
@@ -273,34 +272,51 @@
     private int pendingDeliveries = 0;
     private int poIssuesCount = 0;
 
+    private int OrganizationId = 0;
+
+    [CascadingParameter] private Task<AuthenticationState> authenticationStateTask { get; set; }
+
     protected override async Task OnInitializedAsync()
     {
+        await SetOrganizationId();
         await LoadDashboardData();
+    }
+
+    private async Task SetOrganizationId()
+    {
+        var authState = await authenticationStateTask;
+        var user = authState.User;
+
+        var orgClaim = user.FindFirst("OrganizationId")?.Value;
+        if (!int.TryParse(orgClaim, out int orgId))
+            orgId = 0; // fallback if claim missing
+        OrganizationId = orgId;
     }
 
     private async Task LoadDashboardData()
     {
         try
         {
-            // Load products
-            Products = await InventoryService.GetAllProductsAsync(includeSuppliers: true);
-            
-            // Calculate low stock count
+            // Filter products by organization
+            var allProducts = await InventoryService.GetAllProductsAsync(includeSuppliers: true);
+            Products = allProducts.Where(p => p.OrganizationId == OrganizationId).ToList();
+
             lowStockCount = Products.Count(p => p.CurrentStock <= p.MinLevel);
 
-            // Load purchase orders
+            // Filter purchase orders by organization
             var allPurchaseOrders = await InventoryService.GetAllPurchaseOrdersAsync();
             recentPurchaseOrders = allPurchaseOrders
+                .Where(po => po.OrganizationId == OrganizationId)
                 .OrderByDescending(po => po.OrderDate)
                 .ToList();
 
             // Calculate KPIs
-            pendingDeliveries = allPurchaseOrders.Count(po => 
-                po.Status == "Ordered" || 
-                po.Status == "Shipped" || 
+            pendingDeliveries = recentPurchaseOrders.Count(po =>
+                po.Status == "Ordered" ||
+                po.Status == "Shipped" ||
                 po.Status == "PartiallyReceived");
-            
-            poIssuesCount = allPurchaseOrders.Count(po => po.Status == "Issue");
+
+            poIssuesCount = recentPurchaseOrders.Count(po => po.Status == "Issue");
         }
         catch (Exception ex)
         {
@@ -321,21 +337,18 @@
 
     private void QuickReorder(int productId)
     {
-        // Navigate to create PO with pre-selected product (capital P to match parameter name)
         NavigationManager.NavigateTo($"/Manager/Inventory/CreatePurchaseOrder?ProductId={productId}");
     }
 
-    private string GetStatusBadgeClass(string status)
+    private string GetStatusBadgeClass(string status) => status switch
     {
-        return status switch
-        {
-            "Ordered" => "bg-info text-dark",
-            "Shipped" => "bg-primary",
-            "PartiallyReceived" => "bg-warning text-dark",
-            "Delivered" => "bg-success",
-            "Issue" => "bg-danger",
-            "Cancelled" => "bg-secondary",
-            _ => "bg-secondary"
-        };
-    }
+        "Ordered" => "bg-info text-dark",
+        "Shipped" => "bg-primary",
+        "PartiallyReceived" => "bg-warning text-dark",
+        "Delivered" => "bg-success",
+        "Issue" => "bg-danger",
+        "Cancelled" => "bg-secondary",
+        _ => "bg-secondary"
+    };
 }
+

@@ -3,9 +3,11 @@
 @using TestAbsa.Data.Models
 @using TestAbsa.Data
 @using TestAbsa.Services
+@using System.Security.Claims
 @inject IFinanceService FinanceService
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
+@inject AuthenticationStateProvider AuthStateProvider
 @rendermode InteractiveServer
 
 <PageTitle>Finance Dashboard</PageTitle>
@@ -100,40 +102,51 @@
     private int pendingExpensesCount = 0;
     private int totalInvoicesCount = 0;
     private decimal outstandingAmount = 0;
-     private bool isLoading = true;
+    private bool isLoading = true;
 
+    private string? currentUserId;
+    private int? currentOrganizationId;
 
-protected override async Task OnInitializedAsync()
-{
-    try
+    protected override async Task OnInitializedAsync()
     {
-        isLoading = true;
+        try
+        {
+            isLoading = true;
 
-        // Load all data concurrently for best performance
-        var totalExpensesTask = FinanceService.GetTotalExpensesAsync();
-        var pendingExpensesTask = FinanceService.GetPendingExpensesAsync();
-        var invoicesTask = FinanceService.GetAllInvoicesAsync();
-        var outstandingTask = FinanceService.GetTotalOutstandingInvoicesAsync();
+            // Get current user's claims
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
 
-        await Task.WhenAll(totalExpensesTask, pendingExpensesTask, invoicesTask, outstandingTask);
+            currentUserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-        // Assign results
-        totalExpenses = totalExpensesTask.Result;
-        pendingExpensesCount = pendingExpensesTask.Result.Count;
-        totalInvoicesCount = invoicesTask.Result.Count;
-        outstandingAmount = outstandingTask.Result;
+            var orgClaim = user.FindFirst("OrganizationId")?.Value;
+            if (int.TryParse(orgClaim, out int orgId))
+            {
+                currentOrganizationId = orgId;
+            }
+
+            // Load all data concurrently
+            var totalExpensesTask = FinanceService.GetTotalExpensesAsync();
+            var pendingExpensesTask = FinanceService.GetPendingExpensesAsync();
+            var invoicesTask = FinanceService.GetAllInvoicesAsync();
+            var outstandingTask = FinanceService.GetTotalOutstandingInvoicesAsync();
+
+            await Task.WhenAll(totalExpensesTask, pendingExpensesTask, invoicesTask, outstandingTask);
+
+            totalExpenses = totalExpensesTask.Result;
+            pendingExpensesCount = pendingExpensesTask.Result.Count;
+            totalInvoicesCount = invoicesTask.Result.Count;
+            outstandingAmount = outstandingTask.Result;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] Failed to load dashboard data: {ex}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
     }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"[ERROR] Failed to load dashboard data: {ex}");
-    }
-    finally
-    {
-        isLoading = false;
-    }
-}
-
-
 
     private void NavigateToInvoices()
     {

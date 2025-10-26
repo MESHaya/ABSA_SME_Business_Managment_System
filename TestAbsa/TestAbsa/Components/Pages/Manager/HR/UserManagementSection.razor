@@ -120,38 +120,60 @@ else
     private string fireErrorMessage = string.Empty;
     private string? statusMessage;
 
+    private int? managerOrganizationId;
+    private ApplicationUser? currentManager;
+
+
     protected override async Task OnInitializedAsync()
     {
+        await LoadCurrentManager();
         await LoadManagerEmails();
         await ToggleUserView(UserViewType.Pending);
         isLoading = false;
     }
 
+    private async Task LoadCurrentManager()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        var managerId = UserManager.GetUserId(user);
+        if (!string.IsNullOrEmpty(managerId))
+        {
+            currentManager = await UserManager.FindByIdAsync(managerId);
+            managerOrganizationId = currentManager?.OrganizationId;
+
+            if (!managerOrganizationId.HasValue)
+            {
+                Logger.LogWarning("Manager {ManagerId} has no OrganizationId", managerId);
+            }
+        }
+    }
+
+
     // Helper to load manager emails for display
     private async Task LoadManagerEmails()
     {
+        if (!managerOrganizationId.HasValue) return;
+
         using var context = await DbContextFactory.CreateDbContextAsync();
 
         var allManagerIdsQuery = await context.Users
+            .Where(u => u.OrganizationId == managerOrganizationId)
             .Select(u => new
             {
                 u.ApprovedByManagerId,
                 u.RejectedByManagerId,
                 u.FiredByManagerId
             })
-            // Execute the query to pull the data into memory (client-side)
             .ToListAsync();
 
-        // LINQ-to-Objects (client-side) to combine and clean the IDs.
-        // The query is now executed in C# code, not SQL.
         var uniqueManagerIds = allManagerIdsQuery
-            // Use SelectMany to flatten the anonymous object into a sequence of all IDs
             .SelectMany(ids => new[] { ids.ApprovedByManagerId, ids.RejectedByManagerId, ids.FiredByManagerId })
             .Where(id => id != null)
             .Distinct()
             .ToList();
 
-        // fetch the manager emails 
         var managers = await context.Users
             .Where(u => uniqueManagerIds.Contains(u.Id))
             .Select(u => new { u.Id, u.Email })
@@ -160,21 +182,34 @@ else
         managerEmails = managers.ToDictionary(m => m.Id, m => m.Email ?? "Unknown Manager");
     }
 
+
     private async Task ToggleUserView(UserViewType view)
     {
         currentView = view;
         using var context = await DbContextFactory.CreateDbContextAsync();
+
+        if (!managerOrganizationId.HasValue)
+        {
+            currentUsers = new List<ApplicationUser>();
+            return;
+        }
+
         currentUsers = view switch
         {
-            // Only show users who are approved AND active
-            UserViewType.ApprovedActive => await context.Users.Where(u => u.IsApproved && u.IsActive).ToListAsync(),
-            // Only show users who were approved BUT are inactive (i.e., fired)
-            UserViewType.FiredInactive => await context.Users.Where(u => u.IsApproved && !u.IsActive && u.IsFired).ToListAsync(),
-            // Show users marked as rejected
-            UserViewType.Rejected => await context.Users.Where(u => u.IsRejected).ToListAsync(),
-            // Show users who are neither approved nor rejected (pending)
-            _ => await context.Users.Where(u => !u.IsApproved && !u.IsRejected).ToListAsync()
+            UserViewType.ApprovedActive => await context.Users
+                .Where(u => u.IsApproved && u.IsActive && u.OrganizationId == managerOrganizationId)
+                .ToListAsync(),
+            UserViewType.FiredInactive => await context.Users
+                .Where(u => u.IsApproved && !u.IsActive && u.IsFired && u.OrganizationId == managerOrganizationId)
+                .ToListAsync(),
+            UserViewType.Rejected => await context.Users
+                .Where(u => u.IsRejected && u.OrganizationId == managerOrganizationId)
+                .ToListAsync(),
+            _ => await context.Users
+                .Where(u => !u.IsApproved && !u.IsRejected && u.OrganizationId == managerOrganizationId)
+                .ToListAsync()
         };
+
         StateHasChanged();
     }
 

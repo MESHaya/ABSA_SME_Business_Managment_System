@@ -83,6 +83,7 @@
     private bool IsLoading = true;
     private string? CurrentUserId;
     private string? CurrentUserName;
+    private int? CurrentOrganizationId; // Add organization filter
 
     // Feedback
     private string ReviewMessage = string.Empty;
@@ -97,6 +98,13 @@
         CurrentUserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         CurrentUserName = user.FindFirst(ClaimTypes.Name)?.Value ?? "Manager"; // Fallback name
 
+        // Assume OrganizationId is stored as a claim
+        var orgClaim = user.FindFirst("OrganizationId")?.Value;
+        if (int.TryParse(orgClaim, out int orgId))
+        {
+            CurrentOrganizationId = orgId;
+        }
+
         // 2. Load pending requests
         await LoadPendingRequests();
         IsLoading = false;
@@ -105,16 +113,20 @@
     private async Task LoadPendingRequests()
     {
         // Check if manager details are available before loading
-        if (CurrentUserId != null)
+        if (CurrentUserId != null && CurrentOrganizationId.HasValue)
         {
-            // Assuming this service method exists and returns List<StockRequest>
-            PendingRequests = await InventoryService.GetPendingStockRequestsAsync();
+            // Load all pending requests and filter by organization
+            var allRequests = await InventoryService.GetPendingStockRequestsAsync();
+            PendingRequests = allRequests
+                .Where(r => r.OrganizationId == CurrentOrganizationId.Value)
+                .OrderByDescending(r => r.RequestDate)
+                .ToList();
         }
         else
         {
-            // If the user ID isn't available, redirect or show an error
+            // If the user ID or organization isn't available, redirect or show an error
             PendingRequests = new List<StockRequest>();
-            ReviewMessage = "Error: Could not retrieve your user identity. Please ensure you are logged in.";
+            ReviewMessage = "Error: Could not retrieve your user identity or organization. Please ensure you are logged in.";
         }
     }
 
@@ -132,12 +144,11 @@
 
         try
         {
-            // FIX: Using the correct, defined variables (CurrentUserId and CurrentUserName)
             bool success = await InventoryService.ReviewStockRequestAsync(
                 requestId,
                 status,
-                CurrentUserId, // CS0103 FIX
-                CurrentUserName // CS0103 FIX
+                CurrentUserId,
+                CurrentUserName
             );
 
             if (success)
@@ -157,3 +168,4 @@
         }
     }
 }
+

@@ -17,48 +17,48 @@
     </div>
 </div>
 
-    <!-- Top KPI Row -->
-    <div class="row g-3 mb-4">
-        <div class="col-md-3 col-6">
-            <div class="card shadow-sm text-center border-0 h-100">
-                <div class="card-body">
-                    <h6 class="text-muted">Total Revenue</h6>
-                    <h3 class="fw-bold">@FormatMoney(financeStats?.GetValueOrDefault("TotalInvoices") ?? 0)</h3>
-                    <small class="text-muted">Paid: @FormatMoney(financeStats?.GetValueOrDefault("PaidInvoices") ?? 0)</small>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3 col-6">
-            <div class="card shadow-sm text-center border-0 h-100">
-                <div class="card-body">
-                    <h6 class="text-muted">Net Revenue</h6>
-                    <h3 class="fw-bold">@FormatMoney(financeStats?.GetValueOrDefault("NetRevenue") ?? 0)</h3>
-                    <small class="text-muted">Expenses: @FormatMoney(financeStats?.GetValueOrDefault("TotalExpenses") ?? 0)</small>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3 col-6">
-            <div class="card shadow-sm text-center border-0 h-100">
-                <div class="card-body">
-                    <h6 class="text-muted">Low Stock Items</h6>
-                    <h3 class="fw-bold text-danger">@lowStockCount</h3>
-                    <small class="text-muted">Total Products: @totalProducts</small>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3 col-6">
-            <div class="card shadow-sm text-center border-0 h-100">
-                <div class="card-body">
-                    <h6 class="text-muted">HR Pending</h6>
-                    <h3 class="fw-bold text-warning">@hrSummary?.PendingLeaveRequests</h3>
-                    <small class="text-muted">Pending Timesheets: @hrSummary?.PendingTimesheets</small>
-                </div>
+<!-- Top KPI Row -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3 col-6">
+        <div class="card shadow-sm text-center border-0 h-100">
+            <div class="card-body">
+                <h6 class="text-muted">Total Revenue</h6>
+                <h3 class="fw-bold">@FormatMoney(financeStats?.GetValueOrDefault("TotalInvoices") ?? 0)</h3>
+                <small class="text-muted">Paid: @FormatMoney(financeStats?.GetValueOrDefault("PaidInvoices") ?? 0)</small>
             </div>
         </div>
     </div>
+
+    <div class="col-md-3 col-6">
+        <div class="card shadow-sm text-center border-0 h-100">
+            <div class="card-body">
+                <h6 class="text-muted">Net Revenue</h6>
+                <h3 class="fw-bold">@FormatMoney(financeStats?.GetValueOrDefault("NetRevenue") ?? 0)</h3>
+                <small class="text-muted">Expenses: @FormatMoney(financeStats?.GetValueOrDefault("TotalExpenses") ?? 0)</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-6">
+        <div class="card shadow-sm text-center border-0 h-100">
+            <div class="card-body">
+                <h6 class="text-muted">Low Stock Items</h6>
+                <h3 class="fw-bold text-danger">@lowStockCount</h3>
+                <small class="text-muted">Total Products: @totalProducts</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-6">
+        <div class="card shadow-sm text-center border-0 h-100">
+            <div class="card-body">
+                <h6 class="text-muted">Pending HR</h6>
+                <h3 class="fw-bold text-warning">@hrSummary?.PendingLeaveRequests</h3>
+                <small class="text-muted">Pending Timesheets: @hrSummary?.PendingTimesheets</small>
+            </div>
+        </div>
+    </div>
+</div>
 
     <!-- Alerts and Quick Actions -->
     <div class="row g-4 mb-4">
@@ -231,7 +231,26 @@
     private bool inventoryLoading = true;
     private bool hrLoading = true;
 
-    protected override async Task OnInitializedAsync() => await LoadAll();
+    private int OrganizationId = 0;
+
+    [CascadingParameter] private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await SetOrganizationId();
+        await LoadAll();
+    }
+
+    private async Task SetOrganizationId()
+    {
+        var authState = await authenticationStateTask;
+        var user = authState.User;
+
+        var orgClaim = user.FindFirst("OrganizationId")?.Value;
+        if (!int.TryParse(orgClaim, out int orgId))
+            orgId = 0;
+        OrganizationId = orgId;
+    }
 
     private async Task LoadAll()
     {
@@ -264,16 +283,29 @@
         try
         {
             inventoryLoading = true;
-            var products = await InventoryService.GetAllProductsAsync(includeSuppliers: true);
+
+            var products = (await InventoryService.GetAllProductsAsync(includeSuppliers: true))
+                            .Where(p => p.OrganizationId == OrganizationId)
+                            .ToList();
+
             totalProducts = products.Count;
             lowStockCount = products.Count(p => p.CurrentStock < p.MinLevel);
-            lowStockProducts = products.Where(p => p.CurrentStock < p.MinLevel).OrderBy(p => p.CurrentStock).Take(8).ToList();
+            lowStockProducts = products.Where(p => p.CurrentStock < p.MinLevel)
+                                       .OrderBy(p => p.CurrentStock)
+                                       .Take(8)
+                                       .ToList();
 
-            var orders = await InventoryService.GetAllPurchaseOrdersAsync();
+            var orders = (await InventoryService.GetAllPurchaseOrdersAsync())
+                         .Where(o => o.OrganizationId == OrganizationId)
+                         .ToList();
+
             pendingPurchaseOrders = orders.Count(o => o.Status == "Pending" || o.Status == "Ordered");
             recentOrders = orders.OrderByDescending(o => o.OrderDate).Take(6).ToList();
 
-            var suppliers = await InventoryService.GetAllSuppliersAsync();
+            var suppliers = (await InventoryService.GetAllSuppliersAsync())
+                            .Where(s => s.OrganizationId == OrganizationId)
+                            .ToList();
+
             totalSuppliers = suppliers.Count;
         }
         catch (Exception ex)
@@ -288,8 +320,11 @@
         try
         {
             hrLoading = true;
+
             hrSummary = await HRService.GetHRSummaryAsync();
-            recentLeaves = await HRService.GetAllLeaveRequestsAsync();
+            recentLeaves = (await HRService.GetAllLeaveRequestsAsync())
+                           .Where(l => l.OrganizationId == OrganizationId)
+                           .ToList();
         }
         catch (Exception ex)
         {
@@ -313,6 +348,7 @@
     }
 
     private void NavigateToAlerts() => Navigation.NavigateTo("/manager/alerts");
+
     private string FormatMoney(decimal value) => value.ToString("C");
 
     private class AlertItem

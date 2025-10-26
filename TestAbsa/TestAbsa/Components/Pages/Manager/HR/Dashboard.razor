@@ -12,6 +12,8 @@
 @inject ILogger<Dashboard> Logger
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
+
+
 <PageTitle>HR Dashboard</PageTitle>
 
 <h1>HR Management Dashboard</h1>
@@ -44,8 +46,8 @@
     @* Leave Management Section (existing code) *@
     <div class="mb-3">
         <button class="btn @(leaveView == LeaveViewType.Pending ? "btn-primary" : "btn-outline-primary") me-2"
-                @onclick="() => ToggleLeaveView(LeaveViewType.Pending)"
-                disabled="@isLoading">
+        @onclick="() => ToggleLeaveView(LeaveViewType.Pending)"
+        disabled="@isLoading">
             <i class="bi bi-clock-history"></i> Pending Requests
             @if (leaveView == LeaveViewType.Pending && pendingLeaves != null)
             {
@@ -53,8 +55,8 @@
             }
         </button>
         <button class="btn @(leaveView == LeaveViewType.Approved ? "btn-primary" : "btn-outline-primary") me-2"
-                @onclick="() => ToggleLeaveView(LeaveViewType.Approved)"
-                disabled="@isLoading">
+        @onclick="() => ToggleLeaveView(LeaveViewType.Approved)"
+        disabled="@isLoading">
             <i class="bi bi-check-circle"></i> Approved Requests
             @if (leaveView == LeaveViewType.Approved && approvedLeaves != null)
             {
@@ -62,8 +64,8 @@
             }
         </button>
         <button class="btn @(leaveView == LeaveViewType.Rejected ? "btn-primary" : "btn-outline-primary")"
-                @onclick="() => ToggleLeaveView(LeaveViewType.Rejected)"
-                disabled="@isLoading">
+        @onclick="() => ToggleLeaveView(LeaveViewType.Rejected)"
+        disabled="@isLoading">
             <i class="bi bi-x-circle"></i> Rejected Requests
             @if (leaveView == LeaveViewType.Rejected && rejectedLeaves != null)
             {
@@ -121,13 +123,13 @@
                                 <td>@leave.RequestDate.ToString("yyyy-MM-dd")</td>
                                 <td>
                                     <button class="btn btn-success btn-sm"
-                                            @onclick="() => ShowApprovalModal(leave)"
-                                            disabled="@isProcessing">
+                                    @onclick="() => ShowApprovalModal(leave)"
+                                    disabled="@isProcessing">
                                         <i class="bi bi-check-circle"></i> Approve
                                     </button>
                                     <button class="btn btn-danger btn-sm ms-1"
-                                            @onclick="() => ShowRejectionModal(leave)"
-                                            disabled="@isProcessing">
+                                    @onclick="() => ShowRejectionModal(leave)"
+                                    disabled="@isProcessing">
                                         <i class="bi bi-x-circle"></i> Reject
                                     </button>
                                 </td>
@@ -317,8 +319,8 @@ else if (mainView == MainView.TimesheetApprovals)
     @* Timesheet Approvals Section *@
     <div class="mb-3">
         <button class="btn @(timesheetFilter == "Pending" ? "btn-primary" : "btn-outline-primary") me-2"
-                @onclick="@(() => ChangeTimesheetFilter("Pending"))"
-                disabled="@isLoading">
+        @onclick="@(() => ChangeTimesheetFilter("Pending"))"
+        disabled="@isLoading">
             <i class="bi bi-clock-history"></i> Pending
             @if (timesheetFilter == "Pending" && timesheets != null)
             {
@@ -326,8 +328,8 @@ else if (mainView == MainView.TimesheetApprovals)
             }
         </button>
         <button class="btn @(timesheetFilter == "Approved" ? "btn-primary" : "btn-outline-primary") me-2"
-                @onclick="@(() => ChangeTimesheetFilter("Approved"))"
-                disabled="@isLoading">
+        @onclick="@(() => ChangeTimesheetFilter("Approved"))"
+        disabled="@isLoading">
             <i class="bi bi-check-circle"></i> Approved
             @if (timesheetFilter == "Approved" && timesheets != null)
             {
@@ -335,8 +337,8 @@ else if (mainView == MainView.TimesheetApprovals)
             }
         </button>
         <button class="btn @(timesheetFilter == "Rejected" ? "btn-primary" : "btn-outline-primary")"
-                @onclick="@(() => ChangeTimesheetFilter("Rejected"))"
-                disabled="@isLoading">
+        @onclick="@(() => ChangeTimesheetFilter("Rejected"))"
+        disabled="@isLoading">
             <i class="bi bi-x-circle"></i> Rejected
             @if (timesheetFilter == "Rejected" && timesheets != null)
             {
@@ -414,13 +416,13 @@ else if (mainView == MainView.TimesheetApprovals)
                                     @if (!entry.IsApproved && !entry.IsRejected)
                                     {
                                         <button class="btn btn-success btn-sm"
-                                                @onclick="() => ApproveTimesheet(entry.Id)"
-                                                disabled="@isProcessing">
+                                        @onclick="() => ApproveTimesheet(entry.Id)"
+                                        disabled="@isProcessing">
                                             <i class="bi bi-check-circle"></i> Approve
                                         </button>
                                         <button class="btn btn-danger btn-sm ms-1"
-                                                @onclick="() => OpenTimesheetRejectModal(entry.Id)"
-                                                disabled="@isProcessing">
+                                        @onclick="() => OpenTimesheetRejectModal(entry.Id)"
+                                        disabled="@isProcessing">
                                             <i class="bi bi-x-circle"></i> Reject
                                         </button>
                                     }
@@ -492,8 +494,8 @@ else if (mainView == MainView.UserManagement)
     @* User Management Section (existing code) *@
     <div class="mb-3">
         <button class="btn @(userView == UserViewType.Pending ? "btn-primary" : "btn-outline-primary") me-2"
-                @onclick="() => ToggleUserView(UserViewType.Pending)"
-                disabled="@isLoading">
+        @onclick="() => ToggleUserView(UserViewType.Pending)"
+        disabled="@isLoading">
             <i class="bi bi-clock-history"></i> Pending Registrations
             @if (userView == UserViewType.Pending && pendingUsers != null)
             {
@@ -501,8 +503,8 @@ else if (mainView == MainView.UserManagement)
             }
         </button>
         <button class="btn @(userView == UserViewType.Approved ? "btn-primary" : "btn-outline-primary") me-2"
-                @onclick="() => ToggleUserView(UserViewType.Approved)"
-                disabled="@isLoading">
+        @onclick="() => ToggleUserView(UserViewType.Approved)"
+        disabled="@isLoading">
             <i class="bi bi-check-circle"></i> Approved Employees
             @if (userView == UserViewType.Approved && approvedUsers != null)
             {
@@ -510,8 +512,8 @@ else if (mainView == MainView.UserManagement)
             }
         </button>
         <button class="btn @(userView == UserViewType.Rejected ? "btn-primary" : "btn-outline-primary")"
-                @onclick="() => ToggleUserView(UserViewType.Rejected)"
-                disabled="@isLoading">
+        @onclick="() => ToggleUserView(UserViewType.Rejected)"
+        disabled="@isLoading">
             <i class="bi bi-x-circle"></i> Rejected Users
             @if (userView == UserViewType.Rejected && rejectedUsers != null)
             {
@@ -671,13 +673,13 @@ else if (mainView == MainView.UserManagement)
                                 <td>@user.RegistrationDate.ToString("yyyy-MM-dd HH:mm")</td>
                                 <td>
                                     <button class="btn btn-success btn-sm"
-                                            @onclick="() => ApproveUser(user.Id)"
-                                            disabled="@isProcessing">
+                                    @onclick="() => ApproveUser(user.Id)"
+                                    disabled="@isProcessing">
                                         <i class="bi bi-check-circle"></i> Approve
                                     </button>
                                     <button class="btn btn-danger btn-sm ms-2"
-                                            @onclick="() => RejectUser(user.Id)"
-                                            disabled="@isProcessing">
+                                    @onclick="() => RejectUser(user.Id)"
+                                    disabled="@isProcessing">
                                         <i class="bi bi-x-circle"></i> Reject
                                     </button>
                                 </td>
@@ -698,6 +700,10 @@ else if (mainView == MainView.UserManagement)
     private enum MainView { LeaveManagement, UserManagement, TimesheetApprovals }
     private enum LeaveViewType { Pending, Approved, Rejected }
     private enum UserViewType { Pending, Approved, Rejected }
+
+    private int? managerOrganizationId;
+    private ApplicationUser? currentUser;
+
 
     // Main view state
     private MainView mainView = MainView.LeaveManagement;
@@ -760,10 +766,24 @@ else if (mainView == MainView.UserManagement)
         {
             var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
             var claimsPrincipal = authState.User;
-            
+
+            // Get the logged-in manager's user ID
             currentManagerId = UserManager.GetUserId(claimsPrincipal);
-            
-            if (string.IsNullOrEmpty(currentManagerId))
+
+            if (!string.IsNullOrEmpty(currentManagerId))
+            {
+                // Load full manager details
+                currentUser = await UserManager.FindByIdAsync(currentManagerId);
+
+                // Assign OrganizationId to the class-level variable
+                managerOrganizationId = currentUser?.OrganizationId;
+
+                if (!managerOrganizationId.HasValue)
+                {
+                    Logger.LogWarning("Manager {ManagerId} does not have an OrganizationId", currentManagerId);
+                }
+            }
+            else
             {
                 Logger.LogWarning("Unable to retrieve current manager ID");
             }
@@ -773,6 +793,8 @@ else if (mainView == MainView.UserManagement)
             Logger.LogError(ex, "Error loading current manager");
         }
     }
+
+
 
     private async Task SwitchMainView(MainView view)
     {
@@ -842,7 +864,7 @@ else if (mainView == MainView.UserManagement)
             using var context = await DbContextFactory.CreateDbContextAsync();
 
             pendingLeaves = await context.LeaveRequests
-                .Where(l => l.Status == "Pending")
+                .Where(l => l.Status == "Pending" && l.OrganizationId == managerOrganizationId)
                 .OrderByDescending(l => l.RequestDate)
                 .ToListAsync();
 
@@ -865,7 +887,7 @@ else if (mainView == MainView.UserManagement)
             using var context = await DbContextFactory.CreateDbContextAsync();
 
             approvedLeaves = await context.LeaveRequests
-                .Where(l => l.Status == "Approved")
+                .Where(l => l.Status == "Approved" && l.OrganizationId == managerOrganizationId)
                 .OrderByDescending(l => l.ReviewedDate)
                 .ToListAsync();
 
@@ -888,7 +910,7 @@ else if (mainView == MainView.UserManagement)
             using var context = await DbContextFactory.CreateDbContextAsync();
 
             rejectedLeaves = await context.LeaveRequests
-                .Where(l => l.Status == "Rejected")
+                .Where(l => l.Status == "Rejected" && l.OrganizationId == managerOrganizationId)
                 .OrderByDescending(l => l.ReviewedDate)
                 .ToListAsync();
 
@@ -1090,7 +1112,7 @@ else if (mainView == MainView.UserManagement)
         {
             using var context = await DbContextFactory.CreateDbContextAsync();
             pendingUsers = await context.Users
-                .Where(u => !u.IsApproved && !u.IsRejected && u.UserRole == "Employee")
+                .Where(u => !u.IsApproved && !u.IsRejected && u.UserRole == "Employee" && u.OrganizationId == managerOrganizationId)
                 .OrderBy(u => u.RegistrationDate)
                 .ToListAsync();
         }
@@ -1107,7 +1129,7 @@ else if (mainView == MainView.UserManagement)
         {
             using var context = await DbContextFactory.CreateDbContextAsync();
             approvedUsers = await context.Users
-                .Where(u => u.IsApproved && u.UserRole == "Employee")
+                .Where(u => u.IsApproved && u.UserRole == "Employee" && u.OrganizationId == managerOrganizationId)
                 .OrderByDescending(u => u.ApprovedDate)
                 .ToListAsync();
 
@@ -1149,7 +1171,7 @@ else if (mainView == MainView.UserManagement)
         {
             using var context = await DbContextFactory.CreateDbContextAsync();
             rejectedUsers = await context.Users
-                .Where(u => u.IsRejected && u.UserRole == "Employee")
+                .Where(u => u.IsRejected && u.UserRole == "Employee" && u.OrganizationId == managerOrganizationId)
                 .OrderByDescending(u => u.RejectedDate)
                 .ToListAsync();
 
@@ -1304,6 +1326,7 @@ else if (mainView == MainView.UserManagement)
             
             var query = context.TimesheetEntries
                 .Include(t => t.Employee)
+                .Where(t => t.Employee.OrganizationId == managerOrganizationId)
                 .AsQueryable();
 
             query = timesheetFilter switch

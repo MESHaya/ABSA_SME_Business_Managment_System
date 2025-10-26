@@ -231,6 +231,8 @@
     // Manager info
     private string currentManagerId = string.Empty;
     private string currentManagerName = string.Empty;
+    private int? managerOrganizationId = null;
+
 
     protected override async Task OnInitializedAsync()
     {
@@ -247,6 +249,11 @@
         {
             currentManagerId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "Unknown";
             currentManagerName = user.Identity.Name ?? "Unknown Manager";
+
+            // Assuming your claims contain OrganizationId
+            var orgIdClaim = user.FindFirst("OrganizationId")?.Value;
+            if (int.TryParse(orgIdClaim, out var orgId))
+                managerOrganizationId = orgId;
         }
     }
 
@@ -256,8 +263,14 @@
         try
         {
             var allRequests = await InventoryService.GetAllStockRequestsAsync();
-            PendingRequests = allRequests.Where(r => r.Status == "Pending").ToList();
-            ReviewedRequests = allRequests.Where(r => r.Status != "Pending").Take(10).ToList();
+
+            // Filter by manager's organization
+            var orgRequests = allRequests
+                .Where(r => r.OrganizationId == managerOrganizationId.Value)
+                .ToList();
+
+            PendingRequests = orgRequests.Where(r => r.Status == "Pending").ToList();
+            ReviewedRequests = orgRequests.Where(r => r.Status != "Pending").Take(10).ToList();
         }
         catch (Exception ex)
         {
@@ -269,6 +282,7 @@
             isLoading = false;
         }
     }
+
 
     private void ShowReviewModal(StockRequest request, bool approve)
     {

@@ -3,9 +3,12 @@
 
 @using TestAbsa.Data.Models
 @using TestAbsa.Services
+@using TestAbsa.Data
 @inject IFinanceService FinanceService
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
+@inject AuthenticationStateProvider AuthStateProvider
+@inject Microsoft.AspNetCore.Identity.UserManager<ApplicationUser> UserManager
 
 <PageTitle>Manager Dashboard</PageTitle>
 
@@ -116,29 +119,29 @@
         <ul class="nav nav-tabs mb-3" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link @(activeTab == "expenses" ? "active" : "")" 
-                        type="button"
-                        @onclick="@(() => activeTab = "expenses")">
+                type="button"
+                @onclick="@(() => activeTab = "expenses")">
                     Expense Approval (@pendingExpenses.Count pending)
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link @(activeTab == "invoices" ? "active" : "")" 
-                        type="button"
-                        @onclick="@(() => activeTab = "invoices")">
+                type="button"
+                @onclick="@(() => activeTab = "invoices")">
                     Invoice Management
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link @(activeTab == "customers" ? "active" : "")" 
-                        type="button"
-                        @onclick="@(() => activeTab = "customers")">
+                type="button"
+                @onclick="@(() => activeTab = "customers")">
                     Customers
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link @(activeTab == "reports" ? "active" : "")" 
-                        type="button"
-                        @onclick="@(() => activeTab = "reports")">
+                type="button"
+                @onclick="@(() => activeTab = "reports")">
                     Reports
                 </button>
             </li>
@@ -209,13 +212,13 @@
                                                     @if (!expense.IsApproved)
                                                     {
                                                         <button class="btn btn-sm btn-success me-2" 
-                                                                type="button"
-                                                                @onclick="@(() => ApproveExpense(expense.Id))">
+                                                        type="button"
+                                                        @onclick="@(() => ApproveExpense(expense.Id))">
                                                             <i class="bi bi-check-circle"></i> Approve
                                                         </button>
                                                         <button class="btn btn-sm btn-danger" 
-                                                                type="button"
-                                                                @onclick="@(() => DeleteExpense(expense.Id))">
+                                                        type="button"
+                                                        @onclick="@(() => DeleteExpense(expense.Id))">
                                                             <i class="bi bi-x-circle"></i> Reject
                                                         </button>
                                                     }
@@ -248,14 +251,14 @@
                             {
                                 var count = allInvoices.Count(i => i.Status == status);
                                 <button class="btn btn-sm btn-outline-@GetStatusColor(status)" 
-                                        type="button"
-                                        @onclick="@(() => FilterInvoices(status))">
+                                type="button"
+                                @onclick="@(() => FilterInvoices(status))">
                                     @status (@count)
                                 </button>
                             }
                             <button class="btn btn-sm btn-outline-secondary" 
-                                    type="button"
-                                    @onclick="@(() => FilterInvoices(null))">
+                            type="button"
+                            @onclick="@(() => FilterInvoices(null))">
                                 All (@allInvoices.Count)
                             </button>
                         </div>
@@ -299,8 +302,8 @@
                                                         @foreach (var status in Enum.GetValues<InvoiceStatus>())
                                                         {
                                                             <button class="btn btn-sm btn-@(invoice.Status == status ? GetStatusColor(status) : "outline-secondary")" 
-                                                                    type="button"
-                                                                    @onclick="@(() => UpdateInvoiceStatus(invoice.Id, status))">
+                                                            type="button"
+                                                            @onclick="@(() => UpdateInvoiceStatus(invoice.Id, status))">
                                                                 @status
                                                             </button>
                                                         }
@@ -308,9 +311,9 @@
                                                 </td>
                                                 <td>
                                                     <button class="btn btn-sm btn-info me-2" 
-                                                            type="button"
-                                                            @onclick="@(() => DownloadInvoicePdf(invoice.Id, invoice.InvoiceNumber))"
-                                                            disabled="@isDownloading">
+                                                    type="button"
+                                                    @onclick="@(() => DownloadInvoicePdf(invoice.Id, invoice.InvoiceNumber))"
+                                                    disabled="@isDownloading">
                                                         @if (isDownloading && downloadingInvoiceId == invoice.Id)
                                                         {
                                                             <span class="spinner-border spinner-border-sm me-1"></span>
@@ -322,8 +325,8 @@
                                                         Download PDF
                                                     </button>
                                                     <button class="btn btn-sm btn-danger" 
-                                                            type="button"
-                                                            @onclick="@(() => DeleteInvoice(invoice.Id))">
+                                                    type="button"
+                                                    @onclick="@(() => DeleteInvoice(invoice.Id))">
                                                         <i class="bi bi-trash"></i> Delete
                                                     </button>
                                                 </td>
@@ -348,13 +351,13 @@
                         <h5>Customer Management</h5>
                         <div>
                             <button class="btn btn-sm @(customerFilter == true ? "btn-success" : "btn-outline-success")" 
-                                    type="button"
-                                    @onclick="@(() => FilterCustomers(true))">
+                            type="button"
+                            @onclick="@(() => FilterCustomers(true))">
                                 Active (@activeCustomers.Count)
                             </button>
                             <button class="btn btn-sm @(customerFilter == null ? "btn-secondary" : "btn-outline-secondary")" 
-                                    type="button"
-                                    @onclick="@(() => FilterCustomers(null))">
+                            type="button"
+                            @onclick="@(() => FilterCustomers(null))">
                                 All (@allCustomers.Count)
                             </button>
                         </div>
@@ -382,7 +385,7 @@
                                             var totalOwed = customerInvoices
                                                 .Where(i => i.Status != InvoiceStatus.Paid && i.Status != InvoiceStatus.Cancelled)
                                                 .Sum(i => i.Amount);
-                                            
+
                                             <tr>
                                                 <td>@customer.Name</td>
                                                 <td>@customer.Email</td>
@@ -408,15 +411,15 @@
                                                 </td>
                                                 <td>
                                                     <button class="btn btn-sm btn-info me-2" 
-                                                            type="button"
-                                                            @onclick="@(() => ViewCustomerInvoices(customer.Id))">
+                                                    type="button"
+                                                    @onclick="@(() => ViewCustomerInvoices(customer.Id))">
                                                         <i class="bi bi-list-ul"></i> View Invoices
                                                     </button>
                                                     @if (customer.IsActive)
                                                     {
                                                         <button class="btn btn-sm btn-warning" 
-                                                                type="button"
-                                                                @onclick="@(() => DeactivateCustomer(customer.Id))">
+                                                        type="button"
+                                                        @onclick="@(() => DeactivateCustomer(customer.Id))">
                                                             <i class="bi bi-dash-circle"></i> Deactivate
                                                         </button>
                                                     }
@@ -540,7 +543,7 @@
                                     </thead>
                                     <tbody>
                                         @foreach (var customer in activeCustomers.OrderByDescending(c => 
-                                            allInvoices.Where(i => i.CustomerId == c.Id && i.Status == InvoiceStatus.Paid).Sum(i => i.Amount)).Take(10))
+                                          allInvoices.Where(i => i.CustomerId == c.Id && i.Status == InvoiceStatus.Paid).Sum(i => i.Amount)).Take(10))
                                         {
                                             var customerInvoices = allInvoices.Where(i => i.CustomerId == customer.Id).ToList();
                                             var totalInvoiced = customerInvoices.Sum(i => i.Amount);
@@ -548,7 +551,7 @@
                                             var outstanding = customerInvoices
                                                 .Where(i => i.Status != InvoiceStatus.Paid && i.Status != InvoiceStatus.Cancelled)
                                                 .Sum(i => i.Amount);
-                                            
+
                                             <tr>
                                                 <td>@customer.Name</td>
                                                 <td>R @totalInvoiced.ToString("N2")</td>
@@ -570,19 +573,24 @@
 
 <script>
     window.downloadFileFromStream = async (fileName, contentStreamReference) => {
-        const arrayBuffer = await contentStreamReference.arrayBuffer();
-        const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
-        const url = URL.createObjectURL(blob);
-        const anchorElement = document.createElement('a');
-        anchorElement.href = url;
-        anchorElement.download = fileName ?? '';
-        anchorElement.click();
-        anchorElement.remove();
-        URL.revokeObjectURL(url);
+    const arrayBuffer = await contentStreamReference.arrayBuffer();
+    const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const anchorElement = document.createElement('a');
+    anchorElement.href = url;
+    anchorElement.download = fileName ?? '';
+    anchorElement.click();
+    anchorElement.remove();
+    URL.revokeObjectURL(url);
     }
 </script>
 
 @code {
+
+    private ApplicationUser? currentManager;
+    private int? managerOrganizationId;
+
+    // --- Dashboard State ---
     private bool isLoading = true;
     private bool isDownloading = false;
     private int downloadingInvoiceId = 0;
@@ -590,26 +598,45 @@
     private string? successMessage;
     private string activeTab = "expenses";
     private bool? customerFilter = null;
-    
+
     private Dictionary<string, decimal> dashboardStats = new();
-    
+
     private List<Expense> allExpenses = new();
     private List<Expense> pendingExpenses = new();
     private List<Expense> approvedExpenses = new();
     private List<Expense> filteredExpenses = new();
-    
+
     private List<Invoice> allInvoices = new();
     private List<Invoice> filteredInvoices = new();
-    
+
     private List<Customer> allCustomers = new();
     private List<Customer> activeCustomers = new();
     private List<Customer> filteredCustomers = new();
-    
+
     private string approverName = "Manager";
 
+    // --- Initialization ---
     protected override async Task OnInitializedAsync()
     {
         await LoadData();
+    }
+
+    private async Task LoadCurrentManagerAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        var managerId = UserManager.GetUserId(user);
+        if (!string.IsNullOrEmpty(managerId))
+        {
+            currentManager = await UserManager.FindByIdAsync(managerId);
+            managerOrganizationId = currentManager?.OrganizationId;
+
+            if (!managerOrganizationId.HasValue)
+            {
+                errorMessage = "Manager does not have an Organization assigned.";
+            }
+        }
     }
 
     private async Task LoadData()
@@ -619,19 +646,21 @@
             isLoading = true;
             errorMessage = null;
 
+            await LoadCurrentManagerAsync();
+            if (!managerOrganizationId.HasValue) return;
+
             dashboardStats = await FinanceService.GetDashboardStatisticsAsync();
-            
+
             allExpenses = await FinanceService.GetAllExpensesAsync();
-            pendingExpenses = await FinanceService.GetPendingExpensesAsync();
-            approvedExpenses = await FinanceService.GetApprovedExpensesAsync();
+            pendingExpenses = allExpenses.Where(e => !e.IsApproved).ToList();
+            approvedExpenses = allExpenses.Where(e => e.IsApproved).ToList();
             filteredExpenses = pendingExpenses;
-            
+
             allInvoices = await FinanceService.GetAllInvoicesAsync();
             filteredInvoices = allInvoices;
-            
+
             allCustomers = await FinanceService.GetAllCustomersAsync();
-            activeCustomers = await FinanceService.GetActiveCustomersAsync();
-            
+            activeCustomers = allCustomers.Where(c => c.IsActive).ToList();
             filteredCustomers = activeCustomers.Any() ? activeCustomers : allCustomers;
         }
         catch (Exception ex)
@@ -644,8 +673,12 @@
         }
     }
 
+    // --- Expenses ---
     private async Task ApproveExpense(int id)
     {
+        var expense = allExpenses.FirstOrDefault(e => e.Id == id && e.OrganizationId == managerOrganizationId);
+        if (expense == null) return;
+
         try
         {
             await FinanceService.ApproveExpenseAsync(id, approverName);
@@ -660,6 +693,9 @@
 
     private async Task DeleteExpense(int id)
     {
+        var expense = allExpenses.FirstOrDefault(e => e.Id == id && e.OrganizationId == managerOrganizationId);
+        if (expense == null) return;
+
         try
         {
             await FinanceService.DeleteExpenseAsync(id);
@@ -680,8 +716,12 @@
             filteredExpenses = allExpenses.Where(e => e.IsApproved == isApproved).ToList();
     }
 
+    // --- Invoices ---
     private async Task UpdateInvoiceStatus(int invoiceId, InvoiceStatus status)
     {
+        var invoice = allInvoices.FirstOrDefault(i => i.Id == invoiceId && i.OrganizationId == managerOrganizationId);
+        if (invoice == null) return;
+
         try
         {
             await FinanceService.UpdateInvoiceStatusAsync(invoiceId, status);
@@ -696,6 +736,9 @@
 
     private async Task DeleteInvoice(int id)
     {
+        var invoice = allInvoices.FirstOrDefault(i => i.Id == id && i.OrganizationId == managerOrganizationId);
+        if (invoice == null) return;
+
         try
         {
             await FinanceService.DeleteInvoiceAsync(id);
@@ -718,19 +761,21 @@
 
     private async Task DownloadInvoicePdf(int invoiceId, string invoiceNumber)
     {
+        var invoice = allInvoices.FirstOrDefault(i => i.Id == invoiceId && i.OrganizationId == managerOrganizationId);
+        if (invoice == null) return;
+
         try
         {
             isDownloading = true;
             downloadingInvoiceId = invoiceId;
             errorMessage = null;
-            
+
             var pdfBytes = await FinanceService.GenerateInvoicePdfAsync(invoiceId);
-            
             var fileName = $"Invoice_{invoiceNumber}_{DateTime.Now:yyyyMMdd}.pdf";
-            
+
             using var streamRef = new DotNetStreamReference(stream: new MemoryStream(pdfBytes));
             await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
-            
+
             successMessage = $"Invoice {invoiceNumber} downloaded successfully";
         }
         catch (Exception ex)
@@ -744,10 +789,11 @@
         }
     }
 
+    // --- Customers ---
     private void FilterCustomers(bool? isActive)
     {
         customerFilter = isActive;
-        
+
         if (isActive == null)
             filteredCustomers = allCustomers;
         else
@@ -756,6 +802,9 @@
 
     private async Task DeactivateCustomer(int id)
     {
+        var customer = allCustomers.FirstOrDefault(c => c.Id == id && c.OrganizationId == managerOrganizationId);
+        if (customer == null) return;
+
         try
         {
             await FinanceService.DeleteCustomerAsync(id);
@@ -770,10 +819,11 @@
 
     private void ViewCustomerInvoices(int customerId)
     {
-        filteredInvoices = allInvoices.Where(i => i.CustomerId == customerId).ToList();
+        filteredInvoices = allInvoices.Where(i => i.CustomerId == customerId && i.OrganizationId == managerOrganizationId).ToList();
         activeTab = "invoices";
     }
 
+    // --- Helpers ---
     private string GetStatusColor(InvoiceStatus status)
     {
         return status switch

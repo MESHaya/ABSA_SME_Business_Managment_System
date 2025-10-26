@@ -1,5 +1,4 @@
 ﻿@page "/manager/purchase-order"
-
 @rendermode InteractiveServer
 
 @using TestAbsa.Data
@@ -33,45 +32,21 @@
 
     <!-- Filter Tabs -->
     <ul class="nav nav-tabs mb-3">
-        <li class="nav-item">
-            <a class="nav-link @(filterStatus == "All" ? "active" : "")" @onclick='() => SetFilter("All")' style="cursor: pointer;">
-                All (@allOrders.Count)
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link @(filterStatus == "Ordered" ? "active" : "")" @onclick='() => SetFilter("Ordered")' style="cursor: pointer;">
-                Ordered (@allOrders.Count(o => o.Status == "Ordered"))
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link @(filterStatus == "Shipped" ? "active" : "")" @onclick='() => SetFilter("Shipped")' style="cursor: pointer;">
-                Shipped (@allOrders.Count(o => o.Status == "Shipped"))
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link @(filterStatus == "PartiallyReceived" ? "active" : "")" @onclick='() => SetFilter("PartiallyReceived")' style="cursor: pointer;">
-                Partial (@allOrders.Count(o => o.Status == "PartiallyReceived"))
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link @(filterStatus == "Delivered" ? "active" : "")" @onclick='() => SetFilter("Delivered")' style="cursor: pointer;">
-                Delivered (@allOrders.Count(o => o.Status == "Delivered"))
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link @(filterStatus == "Issue" ? "active" : "")" @onclick='() => SetFilter("Issue")' style="cursor: pointer;">
-                Issues (@allOrders.Count(o => o.Status == "Issue"))
-            </a>
-        </li>
+        @foreach (var status in new[] { "All", "Ordered", "Shipped", "PartiallyReceived", "Delivered", "Issue" })
+        {
+            <li class="nav-item">
+                <a class="nav-link @(filterStatus == status ? "active" : "")" @onclick='() => SetFilter(status)' style="cursor:pointer;">
+                    @status (@CountOrders(status))
+                </a>
+            </li>
+        }
     </ul>
 
     <!-- Purchase Orders Table -->
     @if (isLoading)
     {
         <div class="text-center p-5">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
+            <div class="spinner-border text-primary" role="status"></div>
             <p class="mt-2">Loading purchase orders...</p>
         </div>
     }
@@ -117,22 +92,9 @@
                                         </span>
                                     </td>
                                     <td>R @po.TotalCost.ToString("N2")</td>
-                                    <td>
-                                        <span class="badge @GetStatusBadgeClass(po.Status)">
-                                            @po.Status
-                                        </span>
-                                    </td>
+                                    <td><span class="badge @GetStatusBadgeClass(po.Status)">@po.Status</span></td>
                                     <td>@po.OrderDate.ToString("yyyy-MM-dd")</td>
-                                    <td>
-                                        @if (po.ExpectedDeliveryDate.HasValue)
-                                        {
-                                            <span>@po.ExpectedDeliveryDate.Value.ToString("yyyy-MM-dd")</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted">-</span>
-                                        }
-                                    </td>
+                                    <td>@(po.ExpectedDeliveryDate?.ToString("yyyy-MM-dd") ?? "-")</td>
                                     <td>
                                         <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowDetailsModal(po)">
                                             <i class="oi oi-eye"></i> View
@@ -159,7 +121,6 @@
                     <button type="button" class="btn-close btn-close-white" @onclick="CloseModal"></button>
                 </div>
                 <div class="modal-body">
-                    <!-- Order Information -->
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <h6>Product Information</h6>
@@ -177,7 +138,6 @@
 
                     <hr />
 
-                    <!-- Order Details -->
                     <div class="row mb-3">
                         <div class="col-md-4">
                             <p><strong>Ordered Quantity:</strong> @selectedPO.OrderedQuantity</p>
@@ -200,25 +160,19 @@
 
                     @if (!string.IsNullOrEmpty(selectedPO.Notes))
                     {
-                        <div class="alert alert-info">
-                            <strong>Notes:</strong> @selectedPO.Notes
-                        </div>
+                        <div class="alert alert-info"><strong>Notes:</strong> @selectedPO.Notes</div>
                     }
 
                     @if (!string.IsNullOrEmpty(selectedPO.IssueNotes))
                     {
-                        <div class="alert alert-danger">
-                            <strong>Issue Reported:</strong> @selectedPO.IssueNotes
-                        </div>
+                        <div class="alert alert-danger"><strong>Issue Reported:</strong> @selectedPO.IssueNotes</div>
                     }
 
                     <hr />
 
-                    <!-- Action Section -->
                     @if (selectedPO.Status != "Delivered" && selectedPO.Status != "Cancelled")
                     {
                         <h6>Update Status</h6>
-                        
                         @if (selectedPO.Status == "Ordered")
                         {
                             <button class="btn btn-info me-2" @onclick="() => MarkAsShipped(selectedPO.Id)">
@@ -246,7 +200,7 @@
                     }
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CloseModal">Close</button>
+                    <button class="btn btn-secondary" @onclick="CloseModal">Close</button>
                 </div>
             </div>
         </div>
@@ -256,126 +210,42 @@
 <!-- Receive Stock Modal -->
 @if (showReceiveModal && selectedPO != null)
 {
-    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title">Receive Stock - PO #@selectedPO.Id</h5>
-                    <button type="button" class="btn-close btn-close-white" @onclick="CloseReceiveModal"></button>
-                </div>
-                <div class="modal-body">
-                    <p><strong>Product:</strong> @selectedPO.Product?.ItemName</p>
-                    <p><strong>Remaining to Receive:</strong> @selectedPO.RemainingQuantity units</p>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Quantity Received</label>
-                        <input type="number" class="form-control" @bind="receiveQuantity" min="1" max="@selectedPO.RemainingQuantity" />
-                        <small class="text-muted">Max: @selectedPO.RemainingQuantity</small>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CloseReceiveModal">Cancel</button>
-                    <button type="button" class="btn btn-success" @onclick="ConfirmReceiveStock" disabled="@isProcessing">
-                        @if (isProcessing)
-                        {
-                            <span class="spinner-border spinner-border-sm me-2"></span>
-                        }
-                        Confirm Receipt
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <ReceiveStockModal PO="selectedPO" Quantity="@receiveQuantity" OnClose="CloseReceiveModal" OnConfirm="ConfirmReceiveStock" IsProcessing="@isProcessing" />
 }
 
 <!-- Report Issue Modal -->
 @if (showIssueModal && selectedPO != null)
 {
-    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header bg-warning">
-                    <h5 class="modal-title">Report Issue - PO #@selectedPO.Id</h5>
-                    <button type="button" class="btn-close" @onclick="CloseIssueModal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Issue Description</label>
-                        <textarea class="form-control" rows="4" @bind="issueNotes" placeholder="Describe the issue..."></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CloseIssueModal">Cancel</button>
-                    <button type="button" class="btn btn-warning" @onclick="ConfirmReportIssue" disabled="@isProcessing">
-                        @if (isProcessing)
-                        {
-                            <span class="spinner-border spinner-border-sm me-2"></span>
-                        }
-                        Report Issue
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <ReportIssueModal PO="selectedPO" Notes="@issueNotes" OnClose="CloseIssueModal" OnConfirm="ConfirmReportIssue" IsProcessing="@isProcessing" />
 }
 
 <!-- Cancel Order Modal -->
 @if (showCancelModal && selectedPO != null)
 {
-    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title">Cancel Order - PO #@selectedPO.Id</h5>
-                    <button type="button" class="btn-close btn-close-white" @onclick="CloseCancelModal"></button>
-                </div>
-                <div class="modal-body">
-                    <p class="text-danger"><strong>Warning:</strong> This action cannot be undone.</p>
-                    <div class="mb-3">
-                        <label class="form-label">Reason for Cancellation</label>
-                        <textarea class="form-control" rows="3" @bind="cancelReason" placeholder="Reason for cancelling..."></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CloseCancelModal">Go Back</button>
-                    <button type="button" class="btn btn-danger" @onclick="ConfirmCancelOrder" disabled="@isProcessing">
-                        @if (isProcessing)
-                        {
-                            <span class="spinner-border spinner-border-sm me-2"></span>
-                        }
-                        Yes, Cancel Order
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <CancelOrderModal PO="selectedPO" Reason="@cancelReason" OnClose="CloseCancelModal" OnConfirm="ConfirmCancelOrder" IsProcessing="@isProcessing" />
 }
 
 @code {
     private List<PurchaseOrder> allOrders = new();
     private List<PurchaseOrder> filteredOrders = new();
     private PurchaseOrder? selectedPO;
-    
+
     private string filterStatus = "All";
     private bool isLoading = true;
     private bool isProcessing = false;
-    
+
     private string alertMessage = string.Empty;
     private string alertClass = "alert-success";
 
-    // Modal states
-    private bool showReceiveModal = false;
-    private bool showIssueModal = false;
-    private bool showCancelModal = false;
-    
     private int receiveQuantity = 0;
     private string issueNotes = string.Empty;
     private string cancelReason = string.Empty;
 
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadPurchaseOrders();
-    }
+    private bool showReceiveModal = false;
+    private bool showIssueModal = false;
+    private bool showCancelModal = false;
+
+    protected override async Task OnInitializedAsync() => await LoadPurchaseOrders();
 
     private async Task LoadPurchaseOrders()
     {
@@ -401,22 +271,17 @@
         ApplyFilter();
     }
 
-    private void ApplyFilter()
-    {
+    private void ApplyFilter() =>
         filteredOrders = filterStatus == "All"
             ? allOrders
             : allOrders.Where(o => o.Status == filterStatus).ToList();
-    }
 
-    private void ShowDetailsModal(PurchaseOrder po)
-    {
-        selectedPO = po;
-    }
+    private int CountOrders(string status) =>
+        status == "All" ? allOrders.Count : allOrders.Count(o => o.Status == status);
 
-    private void CloseModal()
-    {
-        selectedPO = null;
-    }
+    private void ShowDetailsModal(PurchaseOrder po) => selectedPO = po;
+
+    private void CloseModal() => selectedPO = null;
 
     private async Task MarkAsShipped(int poId)
     {
@@ -438,10 +303,10 @@
         }
     }
 
-    // Receive Stock Modal
     private void ShowReceiveStockModal(PurchaseOrder po)
     {
-        receiveQuantity = po.RemainingQuantity; // Default to full remaining
+        selectedPO = po;
+        receiveQuantity = po.RemainingQuantity;
         showReceiveModal = true;
     }
 
@@ -464,12 +329,8 @@
 
             if (currentUser != null)
             {
-                await InventoryService.ReceiveStockAsync(
-                    selectedPO.Id,
-                    receiveQuantity,
-                    currentUser.Id,
-                    currentUser.UserName ?? currentUser.Email ?? "Manager"
-                );
+                await InventoryService.ReceiveStockAsync(selectedPO.Id, receiveQuantity, currentUser.Id,
+                    currentUser.UserName ?? currentUser.Email ?? "Manager");
 
                 ShowAlert($"Successfully received {receiveQuantity} units!", "alert-success");
                 await LoadPurchaseOrders();
@@ -487,9 +348,9 @@
         }
     }
 
-    // Report Issue Modal
     private void ShowReportIssueModal(PurchaseOrder po)
     {
+        selectedPO = po;
         issueNotes = string.Empty;
         showIssueModal = true;
     }
@@ -513,12 +374,7 @@
 
             if (currentUser != null)
             {
-                await InventoryService.ReportIssueAsync(
-                    selectedPO.Id,
-                    issueNotes,
-                    currentUser.Id
-                );
-
+                await InventoryService.ReportIssueAsync(selectedPO.Id, issueNotes, currentUser.Id);
                 ShowAlert("Issue reported successfully!", "alert-warning");
                 await LoadPurchaseOrders();
                 CloseIssueModal();
@@ -535,9 +391,9 @@
         }
     }
 
-    // Cancel Order Modal
     private void ShowCancelModal(PurchaseOrder po)
     {
+        selectedPO = po;
         cancelReason = string.Empty;
         showCancelModal = true;
     }
@@ -556,7 +412,6 @@
         try
         {
             await InventoryService.CancelPurchaseOrderAsync(selectedPO.Id, cancelReason);
-
             ShowAlert("Order cancelled successfully!", "alert-info");
             await LoadPurchaseOrders();
             CloseCancelModal();
@@ -578,17 +433,14 @@
         alertClass = cssClass;
     }
 
-    private string GetStatusBadgeClass(string status)
+    private string GetStatusBadgeClass(string status) => status switch
     {
-        return status switch
-        {
-            "Ordered" => "bg-info text-dark",
-            "Shipped" => "bg-primary",
-            "PartiallyReceived" => "bg-warning text-dark",
-            "Delivered" => "bg-success",
-            "Issue" => "bg-danger",
-            "Cancelled" => "bg-secondary",
-            _ => "bg-secondary"
-        };
-    }
+        "Ordered" => "bg-info text-dark",
+        "Shipped" => "bg-primary",
+        "PartiallyReceived" => "bg-warning text-dark",
+        "Delivered" => "bg-success",
+        "Issue" => "bg-danger",
+        "Cancelled" => "bg-secondary",
+        _ => "bg-secondary"
+    };
 }
