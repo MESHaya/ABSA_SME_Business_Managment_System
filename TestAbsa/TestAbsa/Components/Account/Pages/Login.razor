@@ -62,19 +62,14 @@
     {
         if (HttpMethods.IsGet(HttpContext.Request.Method))
         {
-            // Clear the existing external cookie to ensure a clean login process
             await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
         }
     }
 
     public async Task LoginUser()
     {
-        // Find the user by email or username (support both)
-        var user = await UserManager.FindByEmailAsync(Input.Email);
-        if (user == null)
-        {
-            user = await UserManager.FindByNameAsync(Input.Email);
-        }
+        var user = await UserManager.FindByEmailAsync(Input.Email)
+                   ?? await UserManager.FindByNameAsync(Input.Email);
 
         if (user == null)
         {
@@ -82,37 +77,35 @@
             return;
         }
 
-        //Prevent login if email is NOT confirmed
         if (!await UserManager.IsEmailConfirmedAsync(user))
         {
-            errorMessage = "Error: You must confirm your email address before logging in.";
-            Logger.LogWarning("User {Email} attempted to login but email is not confirmed.\n Will redirect in 5 seconds.", Input.Email);
-            // You might want to redirect to ResendEmailConfirmation here
-            await Task.Delay(5000);
+            errorMessage = "Error: You must confirm your email before logging in.";
+            Logger.LogWarning("Unconfirmed user login attempt: {Email}", Input.Email);
+            await Task.Delay(3000);
             RedirectManager.RedirectTo("Account/ResendEmailConfirmation");
             return;
         }
 
-
-        // Prevent login if not approved
         if (!user.IsApproved)
         {
-            errorMessage = "Error: Your account is pending approval. Please wait for a manager to approve your registration.";
-            Logger.LogWarning("User {Email} attempted to login but account is not approved.", Input.Email);
+            errorMessage = "Error: Your account is pending approval.";
+            Logger.LogWarning("Unapproved user login attempt: {Email}", Input.Email);
             return;
         }
 
-        // Authenticate using username (not email)
-        var result = await SignInManager.PasswordSignInAsync(
-            user.UserName, Input.Password, Input.RememberMe, lockoutOnFailure: false);
+        var result = await SignInManager.PasswordSignInAsync(user.UserName, Input.Password, Input.RememberMe, false);
 
         if (result.Succeeded)
         {
-            Logger.LogInformation("User logged in successfully.");
+            Logger.LogInformation("User {Email} logged in successfully.", Input.Email);
 
             var roles = await UserManager.GetRolesAsync(user);
 
-            if (roles.Contains("Manager"))
+            if (roles.Contains("Admin"))
+            {
+                RedirectManager.RedirectTo(ReturnUrl ?? "/admin/dashboard");
+            }
+            else if (roles.Contains("Manager"))
             {
                 RedirectManager.RedirectTo(ReturnUrl ?? "/manager/dashboard");
             }
@@ -127,13 +120,15 @@
         }
         else if (result.RequiresTwoFactor)
         {
-            RedirectManager.RedirectTo(
-                "Account/LoginWith2fa",
-                new() { ["returnUrl"] = ReturnUrl, ["rememberMe"] = Input.RememberMe });
+            RedirectManager.RedirectTo("Account/LoginWith2fa", new()
+                {
+                    ["returnUrl"] = ReturnUrl,
+                    ["rememberMe"] = Input.RememberMe
+                });
         }
         else if (result.IsLockedOut)
         {
-            Logger.LogWarning("User account locked out.");
+            Logger.LogWarning("User {Email} account locked out.", Input.Email);
             RedirectManager.RedirectTo("Account/Lockout");
         }
         else
@@ -144,15 +139,12 @@
 
     private sealed class InputModel
     {
-        [Required]
-        [EmailAddress]
+        [Required, EmailAddress]
         public string Email { get; set; } = "";
 
-        [Required]
-        [DataType(DataType.Password)]
+        [Required, DataType(DataType.Password)]
         public string Password { get; set; } = "";
 
-        [Display(Name = "Remember me?")]
         public bool RememberMe { get; set; }
     }
 }

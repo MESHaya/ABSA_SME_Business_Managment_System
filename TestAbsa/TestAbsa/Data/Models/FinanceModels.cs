@@ -30,6 +30,10 @@ namespace TestAbsa.Data.Models
 
         // Navigation property
         public virtual ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
+
+        [Required]
+        public int OrganizationId { get; set; }
+        public Organization Organization { get; set; } = null!;
     }
 
     public enum InvoiceStatus
@@ -79,6 +83,10 @@ namespace TestAbsa.Data.Models
 
         [NotMapped]
         public DateTime DateIssued => CreatedDate;
+
+        [Required]
+        public int OrganizationId { get; set; }
+        public Organization Organization { get; set; } = null!;
     }
 
 
@@ -108,6 +116,10 @@ namespace TestAbsa.Data.Models
         // This should be [NotMapped] since it's computed
         [NotMapped]
         public decimal Total => Quantity * UnitPrice;
+
+        [Required]
+        public int OrganizationId { get; set; }
+        public Organization Organization { get; set; } = null!;
     }
     public enum ExpenseCategory
     {
@@ -142,5 +154,8 @@ namespace TestAbsa.Data.Models
         public bool IsApproved { get; set; }
         public string? ApprovedBy { get; set; }
         public DateTime? ApprovedDate { get; set; }
+        [Required]
+        public int OrganizationId { get; set; }
+        public Organization Organization { get; set; } = null!;
     }
 } // Only one closing brace

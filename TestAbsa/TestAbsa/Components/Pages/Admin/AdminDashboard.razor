@@ -1,0 +1,139 @@
+﻿@page "/admin/dashboard"
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using TestAbsa.Data
+@using TestAbsa.Data.Models
+@inject ApplicationDbContext _context
+@inject UserManager<ApplicationUser> _userManager
+@using Microsoft.AspNetCore.Authorization
+@using System.ComponentModel.DataAnnotations
+@attribute [Authorize(Roles = "Admin")]
+
+<h3>Admin Dashboard</h3>
+
+<h3>Welcome, Admin</h3>
+
+<p>This is the Admin Dashboard. Only users with the <strong>Admin</strong> role can access this page.</p>
+
+
+<div class="container mt-4">
+    <h4>Registered Organizations</h4>
+
+    @if (organizations == null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else if (!organizations.Any())
+    {
+        <p>No organizations found.</p>
+    }
+    else
+    {
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Employees</th>
+                    <th>Registration Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var org in organizations)
+                {
+                    <tr>
+                        <td>@org.Name</td>
+                        <td>@org.Employees?.Count() ?? 0</td>
+                        <td>@org.RegistrationDate.ToShortDateString()</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    <hr />
+
+    <h4>Add New Organization</h4>
+
+    <EditForm Model="@newOrganization" OnValidSubmit="@CreateCompany">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label>Company Name</label>
+            <InputText class="form-control" @bind-Value="newOrganization.CompanyName" />
+        </div>
+
+        <div class="mb-3">
+            <label>Manager Email</label>
+            <InputText class="form-control" @bind-Value="newOrganization.ManagerEmail" />
+        </div>
+
+        <div class="mb-3">
+            <label>Manager Password</label>
+            <InputText class="form-control" type="password" @bind-Value="newOrganization.ManagerPassword" />
+        </div>
+
+        <button class="btn btn-primary" type="submit">Create Organization</button>
+    </EditForm>
+</div>
+
+@code {
+    private List<Organization> organizations = new();
+    private NewOrgModel newOrganization = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        organizations = await _context.Organizations
+            .Include(o => o.Employees)
+            .OrderBy(o => o.Name)
+            .ToListAsync();
+    }
+
+    private async Task CreateCompany()
+    {
+        if (string.IsNullOrWhiteSpace(newOrganization.CompanyName) ||
+            string.IsNullOrWhiteSpace(newOrganization.ManagerEmail) ||
+            string.IsNullOrWhiteSpace(newOrganization.ManagerPassword))
+            return;
+
+        var org = new Organization
+            {
+                Name = newOrganization.CompanyName,
+                RegistrationDate = DateTime.UtcNow
+            };
+
+        _context.Organizations.Add(org);
+        await _context.SaveChangesAsync();
+
+        var manager = new ApplicationUser
+            {
+                UserName = newOrganization.ManagerEmail,
+                Email = newOrganization.ManagerEmail,
+                EmailConfirmed = true,
+                OrganizationId = org.Id,
+                UserRole = "Manager",
+                IsApproved = true,
+                RegistrationDate = DateTime.UtcNow
+            };
+
+        var result = await _userManager.CreateAsync(manager, newOrganization.ManagerPassword);
+        if (result.Succeeded)
+        {
+            await _userManager.AddToRoleAsync(manager, "Manager");
+            organizations = await _context.Organizations.Include(o => o.Employees).ToListAsync();
+            newOrganization = new(); // reset form
+        }
+    }
+
+    public class NewOrgModel
+    {
+        [Required]
+        public string CompanyName { get; set; } = string.Empty;
+
+        [Required, EmailAddress]
+        public string ManagerEmail { get; set; } = string.Empty;
+
+        [Required, MinLength(6)]
+        public string ManagerPassword { get; set; } = string.Empty;
+    }
+}

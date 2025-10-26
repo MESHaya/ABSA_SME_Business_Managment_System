@@ -6,9 +6,16 @@ namespace TestAbsa.Data
 {
     public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+        private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly string _currentOrgId;
+
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options,
+                                    IHttpContextAccessor httpContextAccessor)
             : base(options)
         {
+            _httpContextAccessor = httpContextAccessor;
+            _currentOrgId = _httpContextAccessor.HttpContext?.User?
+                .Claims.FirstOrDefault(c => c.Type == "OrganizationId")?.Value;
         }
 
         // Inventory Management DbSets
@@ -60,6 +67,13 @@ namespace TestAbsa.Data
                 .HasOne(sr => sr.Organization)
                 .WithMany()
                 .HasForeignKey(sr => sr.OrganizationId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // --- CRITICAL FIX: Invoice -> Organization ---
+            builder.Entity<Invoice>()
+                .HasOne(i => i.Organization)
+                .WithMany() // Adjust if Organization has a navigation property for Invoices
+                .HasForeignKey(i => i.OrganizationId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             // PurchaseOrder -> Organization
@@ -116,25 +130,27 @@ namespace TestAbsa.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
             // --- ApplicationUser Configuration ---
-            builder.Entity<ApplicationUser>()
-                .HasOne(u => u.ApprovedByManager)
-                .WithMany()
-                .HasForeignKey(u => u.ApprovedByManagerId)
-                .OnDelete(DeleteBehavior.Restrict);
+            builder.Entity<ApplicationUser>(entity =>
+            {
+                // Approved relationship
+                entity.HasOne(u => u.ApprovedByManager)
+                      .WithMany()
+                      .HasForeignKey(u => u.ApprovedByManagerId)
+                      .OnDelete(DeleteBehavior.Restrict);
 
-            builder.Entity<ApplicationUser>()
-                .HasOne(u => u.RejectedByManager)
-                .WithMany()
-                .HasForeignKey(u => u.RejectedByManagerId)
-                .IsRequired(false) // Explicitly set IsRequired(false) for nullable FKs
-                .OnDelete(DeleteBehavior.Restrict);
+                // Rejected relationship
+                entity.HasOne(u => u.RejectedByManager)
+                      .WithMany()
+                      .HasForeignKey(u => u.RejectedByManagerId)
+                      .OnDelete(DeleteBehavior.Restrict);
 
-            builder.Entity<ApplicationUser>()
-                .HasOne(u => u.FiredByManager)
-                .WithMany()
-                .HasForeignKey(u => u.FiredByManagerId)
-                .IsRequired(false) // Explicitly set IsRequired(false) for nullable FKs
-                .OnDelete(DeleteBehavior.Restrict);
+                // Fired relationship
+                entity.HasOne(u => u.FiredByManager)
+                      .WithMany()
+                      .HasForeignKey(u => u.FiredByManagerId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
 
 
             // --- TimesheetEntry Configuration ---
@@ -142,7 +158,7 @@ namespace TestAbsa.Data
                 .HasOne(t => t.Employee)
                 .WithMany()
                 .HasForeignKey(t => t.EmployeeId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict); // <-- FIX 1
 
             builder.Entity<TimesheetEntry>()
                 .HasOne(t => t.ApprovedByManager)
@@ -155,7 +171,7 @@ namespace TestAbsa.Data
                 .HasOne(l => l.Employee)
                 .WithMany()
                 .HasForeignKey(l => l.EmployeeId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict); // <-- FIX 2
 
             builder.Entity<LeaveRequest>()
                 .HasOne(l => l.Manager)
@@ -211,7 +227,7 @@ namespace TestAbsa.Data
                 .HasOne(ii => ii.Invoice)
                 .WithMany(i => i.InvoiceItems)
                 .HasForeignKey(ii => ii.InvoiceId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
             // --- Expense Configuration ---
             builder.Entity<Expense>()
@@ -222,6 +238,22 @@ namespace TestAbsa.Data
                 .Property(e => e.Description)
                 .IsRequired()
                 .HasMaxLength(500);
+
+
+            if (!string.IsNullOrEmpty(_currentOrgId))
+            {
+                int orgId = int.Parse(_currentOrgId);
+
+                builder.Entity<Product>().HasQueryFilter(p => p.OrganizationId == orgId);
+                builder.Entity<Supplier>().HasQueryFilter(s => s.OrganizationId == orgId);
+                builder.Entity<StockRequest>().HasQueryFilter(sr => sr.OrganizationId == orgId);
+                builder.Entity<PurchaseOrder>().HasQueryFilter(po => po.OrganizationId == orgId);
+                builder.Entity<TimesheetEntry>().HasQueryFilter(t => t.OrganizationId == orgId);
+                builder.Entity<LeaveRequest>().HasQueryFilter(l => l.OrganizationId == orgId);
+                builder.Entity<Customer>().HasQueryFilter(c => c.OrganizationId == orgId);
+                builder.Entity<Invoice>().HasQueryFilter(i => i.OrganizationId == orgId);
+                builder.Entity<Expense>().HasQueryFilter(e => e.OrganizationId == orgId);
+            }
 
         }
     }

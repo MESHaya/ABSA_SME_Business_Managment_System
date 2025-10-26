@@ -14,7 +14,7 @@ namespace TestAbsa.Data
             var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
 
             // Create roles if they don't exist
-            string[] roleNames = { "Manager", "Employee" };
+            string[] roleNames = { "Admin", "Manager", "Employee" };
 
             foreach (var roleName in roleNames)
             {
@@ -36,20 +36,28 @@ namespace TestAbsa.Data
 
             var context = serviceProvider.GetRequiredService<ApplicationDbContext>();
 
-            // 1. Create a default organization if none exists
-            var defaultOrg = await context.Organizations.FirstOrDefaultAsync(o => o.Name == "Default Absa SME Client");
-            if (defaultOrg == null)
+            // Create default organizations
+            var absaOrg = await context.Organizations.FirstOrDefaultAsync(o => o.Name == "Absa System Organization")
+                           ?? new Organization { Name = "Absa System Organization" };
+            if (absaOrg.Id == 0)
             {
-                defaultOrg = new Organization { Name = "Default Absa SME Client" };
-                context.Organizations.Add(defaultOrg);
+                context.Organizations.Add(absaOrg);
                 await context.SaveChangesAsync();
-                logger.LogInformation("Default organization created.");
+                logger.LogInformation("Absa System Organization created.");
             }
 
-            // Create initial admin/manager if it doesn't exist
+            var defaultSMEOrg = await context.Organizations.FirstOrDefaultAsync(o => o.Name == "Default SME Client")
+                                ?? new Organization { Name = "Default SME Client" };
+            if (defaultSMEOrg.Id == 0)
+            {
+                context.Organizations.Add(defaultSMEOrg);
+                await context.SaveChangesAsync();
+                logger.LogInformation("Default SME Client organization created.");
+            }
+
+            // Create the admin user if it doesn't exist
             var adminEmail = "admin@testabsa.com";
             var adminUser = await userManager.FindByEmailAsync(adminEmail);
-
             if (adminUser == null)
             {
                 var admin = new ApplicationUser
@@ -57,32 +65,61 @@ namespace TestAbsa.Data
                     UserName = adminEmail,
                     Email = adminEmail,
                     EmailConfirmed = true,
-                    UserRole = "Manager",
+                    UserRole = "Admin",
                     IsApproved = true,
                     ApprovedDate = DateTime.UtcNow,
                     RegistrationDate = DateTime.UtcNow,
-                    //  Links Admin to the Default Organization --- should we have it as a default or should we have a unique one?
-                     OrganizationId = defaultOrg.Id // Link to the newly created/found organization
+                    OrganizationId = absaOrg.Id
                 };
 
-                string adminPassword = "Admin@123"; // Change this to a secure password
+                string adminPassword = "Admin@123";
                 var createResult = await userManager.CreateAsync(admin, adminPassword);
 
                 if (createResult.Succeeded)
                 {
-                    await userManager.AddToRoleAsync(admin, "Manager");
+                    await userManager.AddToRoleAsync(admin, "Admin");
                     logger.LogInformation("Admin user created successfully. Email: {Email}", adminEmail);
-                    logger.LogWarning("IMPORTANT: Change the admin password immediately after first login!");
                 }
                 else
                 {
-                    logger.LogError("Failed to create admin user. Errors: {Errors}",
+                    logger.LogError("Failed to create Admin user: {Errors}",
                         string.Join(", ", createResult.Errors.Select(e => e.Description)));
+                }
+            }
+
+            // (Optional) Create a default manager for SME clients
+            var managerEmail = "manager@testabsa.com";
+            var managerUser = await userManager.FindByEmailAsync(managerEmail);
+            if (managerUser == null)
+            {
+                var manager = new ApplicationUser
+                {
+                    UserName = managerEmail,
+                    Email = managerEmail,
+                    EmailConfirmed = true,
+                    UserRole = "Manager",
+                    IsApproved = true,
+                    ApprovedDate = DateTime.UtcNow,
+                    RegistrationDate = DateTime.UtcNow,
+                    OrganizationId = defaultSMEOrg.Id
+                };
+
+                string managerPassword = "Manager@123";
+                var managerResult = await userManager.CreateAsync(manager, managerPassword);
+                if (managerResult.Succeeded)
+                {
+                    await userManager.AddToRoleAsync(manager, "Manager");
+                    logger.LogInformation("Manager user created successfully: {Email}", managerEmail);
+                }
+                else
+                {
+                    logger.LogError("Failed to create Manager user: {Errors}",
+                        string.Join(", ", managerResult.Errors.Select(e => e.Description)));
                 }
             }
         }
 
-        // Method to add additional managers programmatically
+        // Reusable method to add a Manager
         public static async Task<IdentityResult> AddManagerAsync(
             UserManager<ApplicationUser> userManager,
             string email,
@@ -109,7 +146,6 @@ namespace TestAbsa.Data
             };
 
             var result = await userManager.CreateAsync(manager, password);
-
             if (result.Succeeded)
             {
                 await userManager.AddToRoleAsync(manager, "Manager");

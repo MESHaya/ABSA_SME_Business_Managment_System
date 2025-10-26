@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -9,6 +10,7 @@ using PdfSharpCore.Drawing;
 using PdfSharpCore.Pdf;
 using TestAbsa.Data;
 using TestAbsa.Data.Models;
+using TestAbsa.Services;
 
 namespace TestAbsa.Services
 {
@@ -16,13 +18,16 @@ namespace TestAbsa.Services
     {
         private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
         private readonly ILogger<FinanceService> _logger;
+        private readonly IUserContext _userContext;
 
         public FinanceService(
             IDbContextFactory<ApplicationDbContext> contextFactory,
-            ILogger<FinanceService> logger)
+            ILogger<FinanceService> logger,
+            IUserContext userContext)
         {
             _contextFactory = contextFactory;
             _logger = logger;
+            _userContext = userContext;
         }
 
         // Helper method to get context
@@ -37,9 +42,13 @@ namespace TestAbsa.Services
             try
             {
                 using var context = CreateContext();
+                var orgId = await GetUserOrganizationIdAsync();
                 return await context.Customers
+                    .Where(c => c.OrganizationId == orgId)
                     .OrderBy(c => c.Name)
                     .ToListAsync();
+
+
             }
             catch (Exception ex)
             {
@@ -53,7 +62,9 @@ namespace TestAbsa.Services
             try
             {
                 using var context = CreateContext();
+                var orgId = await GetUserOrganizationIdAsync();
                 return await context.Customers
+                    .Where(c => c.OrganizationId == orgId)
                     .Where(c => c.IsActive)
                     .OrderBy(c => c.Name)
                     .ToListAsync();
@@ -73,7 +84,9 @@ namespace TestAbsa.Services
             try
             {
                 using var context = CreateContext();
+                var orgId = await GetUserOrganizationIdAsync();
                 return await context.Customers
+                    .Where(c => c.OrganizationId == orgId)
                     .Include(c => c.Invoices)
                     .FirstOrDefaultAsync(c => c.Id == id);
             }
@@ -94,6 +107,7 @@ namespace TestAbsa.Services
                 using var context = CreateContext();
                 customer.CreatedDate = DateTime.UtcNow;
                 context.Customers.Add(customer);
+                customer.OrganizationId = await GetUserOrganizationIdAsync();
                 await context.SaveChangesAsync();
                 _logger.LogInformation("Customer {CustomerId} created successfully", customer.Id);
                 return customer;
@@ -114,6 +128,7 @@ namespace TestAbsa.Services
             {
                 using var context = CreateContext();
                 context.Customers.Update(customer);
+                customer.OrganizationId = await GetUserOrganizationIdAsync();
                 await context.SaveChangesAsync();
                 _logger.LogInformation("Customer {CustomerId} updated successfully", customer.Id);
             }
@@ -151,7 +166,10 @@ namespace TestAbsa.Services
         public async Task<bool> CustomerExistsAsync(int id)
         {
             using var context = CreateContext();
-            return await context.Customers.AnyAsync(c => c.Id == id);
+            var orgId = await GetUserOrganizationIdAsync();
+            return await context.Customers
+                .Where(c => c.OrganizationId == orgId)
+                .AnyAsync(c => c.Id == id);
         }
 
         // =====================================================
@@ -163,9 +181,11 @@ namespace TestAbsa.Services
             try
             {
                 using var context = CreateContext();
+                var orgId = await GetUserOrganizationIdAsync();
                 return await context.Invoices
                     .Include(i => i.Customer)
                     .Include(i => i.InvoiceItems)
+                    .Where(i => i.OrganizationId == orgId)
                     .OrderByDescending(i => i.CreatedDate)
                     .ToListAsync();
             }
@@ -181,9 +201,11 @@ namespace TestAbsa.Services
             try
             {
                 using var context = CreateContext();
+                var orgId = await GetUserOrganizationIdAsync();
                 return await context.Invoices
                     .Include(i => i.InvoiceItems)
                     .Where(i => i.CustomerId == customerId)
+                    .Where(i => i.OrganizationId == orgId)
                     .OrderByDescending(i => i.CreatedDate)
                     .ToListAsync();
             }
@@ -199,10 +221,12 @@ namespace TestAbsa.Services
             try
             {
                 using var context = CreateContext();
+                var orgId = await GetUserOrganizationIdAsync();
                 return await context.Invoices
-                    .Include(i => i.Customer)
+                                    .Include(i => i.Customer)
                     .Include(i => i.InvoiceItems)
                     .Where(i => i.Status == status)
+                    .Where(i => i.OrganizationId == orgId)
                     .OrderByDescending(i => i.CreatedDate)
                     .ToListAsync();
             }
@@ -221,9 +245,11 @@ namespace TestAbsa.Services
             try
             {
                 using var context = CreateContext();
+                var orgId = await GetUserOrganizationIdAsync();
                 return await context.Invoices
-                    .Include(i => i.Customer)
+                                    .Include(i => i.Customer)
                     .Include(i => i.InvoiceItems)
+                    .Where(i => i.OrganizationId == orgId)
                     .FirstOrDefaultAsync(i => i.Id == id);
             }
             catch (Exception ex)
@@ -243,6 +269,7 @@ namespace TestAbsa.Services
                 using var context = CreateContext();
                 invoice.CreatedDate = DateTime.UtcNow;
                 invoice.InvoiceNumber = GenerateInvoiceNumber();
+                invoice.OrganizationId = await GetUserOrganizationIdAsync();
                 context.Invoices.Add(invoice);
                 await context.SaveChangesAsync();
                 _logger.LogInformation("Invoice {InvoiceId} created successfully", invoice.Id);
@@ -263,6 +290,7 @@ namespace TestAbsa.Services
             try
             {
                 using var context = CreateContext();
+                invoice.OrganizationId = await GetUserOrganizationIdAsync();
                 context.Invoices.Update(invoice);
                 await context.SaveChangesAsync();
                 _logger.LogInformation("Invoice {InvoiceId} updated successfully", invoice.Id);
@@ -308,6 +336,7 @@ namespace TestAbsa.Services
                     invoice.Status = status;
                     if (status == InvoiceStatus.Paid)
                         invoice.PaidDate = DateTime.UtcNow;
+                    invoice.OrganizationId = await GetUserOrganizationIdAsync();
 
                     await context.SaveChangesAsync();
                     _logger.LogInformation("Invoice {InvoiceId} status updated to {Status}", invoiceId, status);
@@ -325,7 +354,10 @@ namespace TestAbsa.Services
             try
             {
                 using var context = CreateContext();
-                return await context.Invoices.SumAsync(i => i.Amount);
+                var orgId = await GetUserOrganizationIdAsync();
+                return await context.Invoices
+                    .Where(i => i.OrganizationId == orgId)
+                    .SumAsync(i => i.Amount);
             }
             catch (Exception ex)
             {
@@ -339,7 +371,9 @@ namespace TestAbsa.Services
             try
             {
                 using var context = CreateContext();
+                var orgId = await GetUserOrganizationIdAsync();
                 return await context.Invoices
+                    .Where(i => i.OrganizationId == orgId)
                     .Where(i => i.Status == InvoiceStatus.Paid)
                     .SumAsync(i => i.Amount);
             }
@@ -355,7 +389,9 @@ namespace TestAbsa.Services
             try
             {
                 using var context = CreateContext();
+                var orgId = await GetUserOrganizationIdAsync();
                 return await context.Invoices
+                    .Where(i => i.OrganizationId == orgId)
                     .Where(i => i.Status != InvoiceStatus.Paid && i.Status != InvoiceStatus.Cancelled)
                     .SumAsync(i => i.Amount);
             }
@@ -454,7 +490,9 @@ namespace TestAbsa.Services
             try
             {
                 using var context = CreateContext();
+                var orgId = await GetUserOrganizationIdAsync();
                 return await context.Expenses
+                    .Where(e => e.OrganizationId == orgId)
                     .OrderByDescending(e => e.Date)
                     .ToListAsync();
             }
@@ -470,7 +508,9 @@ namespace TestAbsa.Services
             try
             {
                 using var context = CreateContext();
+                var orgId = await GetUserOrganizationIdAsync();
                 return await context.Expenses
+                    .Where(e => e.OrganizationId == orgId)
                     .Where(e => e.Category == category)
                     .OrderByDescending(e => e.Date)
                     .ToListAsync();
@@ -487,7 +527,9 @@ namespace TestAbsa.Services
             try
             {
                 using var context = CreateContext();
+                var orgId = await GetUserOrganizationIdAsync();
                 return await context.Expenses
+                    .Where(e => e.OrganizationId == orgId)
                     .Where(e => !e.IsApproved)
                     .OrderByDescending(e => e.Date)
                     .ToListAsync();
@@ -504,7 +546,9 @@ namespace TestAbsa.Services
             try
             {
                 using var context = CreateContext();
+                var orgId = await GetUserOrganizationIdAsync();
                 return await context.Expenses
+                    .Where(e => e.OrganizationId == orgId)
                     .Where(e => e.IsApproved)
                     .OrderByDescending(e => e.Date)
                     .ToListAsync();
@@ -542,6 +586,7 @@ namespace TestAbsa.Services
             {
                 using var context = CreateContext();
                 expense.Date = DateTime.UtcNow;
+                expense.OrganizationId = await GetUserOrganizationIdAsync();
                 context.Expenses.Add(expense);
                 await context.SaveChangesAsync();
                 _logger.LogInformation("Expense {ExpenseId} created successfully", expense.Id);
@@ -562,6 +607,7 @@ namespace TestAbsa.Services
             try
             {
                 using var context = CreateContext();
+                expense.OrganizationId = await GetUserOrganizationIdAsync();
                 context.Expenses.Update(expense);
                 await context.SaveChangesAsync();
                 _logger.LogInformation("Expense {ExpenseId} updated successfully", expense.Id);
@@ -607,6 +653,7 @@ namespace TestAbsa.Services
                     expense.IsApproved = true;
                     expense.ApprovedBy = approvedBy;
                     expense.ApprovedDate = DateTime.UtcNow;
+                    expense.OrganizationId = await GetUserOrganizationIdAsync();
                     await context.SaveChangesAsync();
                     _logger.LogInformation("Expense {ExpenseId} approved by {ApprovedBy}", id, approvedBy);
                 }
@@ -623,7 +670,9 @@ namespace TestAbsa.Services
             try
             {
                 using var context = CreateContext();
+                var orgId = await GetUserOrganizationIdAsync();
                 return await context.Expenses
+                    .Where(e => e.OrganizationId == orgId)
                     .Where(e => e.IsApproved)
                     .SumAsync(e => e.Amount);
             }
@@ -639,7 +688,9 @@ namespace TestAbsa.Services
             try
             {
                 using var context = CreateContext();
+                var orgId = await GetUserOrganizationIdAsync();
                 return await context.Expenses
+                    .Where(e => e.OrganizationId == orgId)
                     .Where(e => e.Category == category && e.IsApproved)
                     .SumAsync(e => e.Amount);
             }
@@ -758,13 +809,21 @@ namespace TestAbsa.Services
         {
             try
             {
+                var orgId = await GetUserOrganizationIdAsync();
+
+                using var context = CreateContext();
+                var totalInvoices = await context.Invoices.Where(i => i.OrganizationId == orgId).SumAsync(i => i.Amount);
+                var paidInvoices = await context.Invoices.Where(i => i.OrganizationId == orgId && i.Status == InvoiceStatus.Paid).SumAsync(i => i.Amount);
+                var outstanding = await context.Invoices.Where(i => i.OrganizationId == orgId && i.Status != InvoiceStatus.Paid && i.Status != InvoiceStatus.Cancelled).SumAsync(i => i.Amount);
+                var totalExpenses = await context.Expenses.Where(e => e.OrganizationId == orgId && e.IsApproved).SumAsync(e => e.Amount);
+
                 return new Dictionary<string, decimal>
                 {
-                    { "TotalInvoices", await GetTotalInvoiceAmountAsync() },
-                    { "PaidInvoices", await GetTotalPaidInvoicesAsync() },
-                    { "OutstandingInvoices", await GetTotalOutstandingInvoicesAsync() },
-                    { "TotalExpenses", await GetTotalExpensesAsync() },
-                    { "NetRevenue", await GetTotalPaidInvoicesAsync() - await GetTotalExpensesAsync() }
+                    { "TotalInvoices", totalInvoices },
+                    { "PaidInvoices", paidInvoices },
+                    { "OutstandingInvoices", outstanding },
+                    { "TotalExpenses", totalExpenses },
+                    { "NetRevenue", paidInvoices - totalExpenses }
                 };
             }
             catch (Exception ex)
@@ -799,5 +858,17 @@ namespace TestAbsa.Services
                 await context.SaveChangesAsync();
             }
         }
+
+        private async Task<int> GetUserOrganizationIdAsync()
+        {
+            var orgId = await _userContext.GetOrganizationIdAsync();
+
+            if (orgId == null || orgId == 0)
+                throw new InvalidOperationException("User organization ID not found or invalid.");
+
+            return orgId.Value; // safely extract the int from int?
+        }
+
+
     }
 }

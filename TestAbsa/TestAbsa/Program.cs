@@ -8,6 +8,7 @@ using TestAbsa.Components.Account;
 using TestAbsa.Data;
 using TestAbsa.Services;
 using Microsoft.AspNetCore.Identity.UI.Services;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +22,8 @@ builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, PersistingRevalidatingAuthenticationStateProvider>();
 //Register the simpler IEmailSender interface that your custom service implements.
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IUserContext, UserContext>();
 
 // concrete implementation against the non-generic IEmailSender interface.
 //    (This is the interface implemented by your custom 'EmailSender' class)

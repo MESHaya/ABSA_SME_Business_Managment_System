@@ -13,6 +13,7 @@ namespace TestAbsa.Services
     public class InventoryService : IInventoryService
     {
         private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
+        private readonly IUserContext _userContext; // ✅ Injected user context
         private readonly IHttpContextAccessor _httpContextAccessor;
 
         public InventoryService(

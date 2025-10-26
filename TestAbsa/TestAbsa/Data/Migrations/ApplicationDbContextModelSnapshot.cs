@@ -180,6 +180,12 @@ namespace TestAbsa.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("bit");
 
+                    b.Property<string>("FiredByManagerId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime?>("FiredDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -192,6 +198,9 @@ namespace TestAbsa.Migrations
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsApproved")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsFired")
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsRejected")
@@ -254,6 +263,8 @@ namespace TestAbsa.Migrations
 
                     b.HasIndex("ApprovedByManagerId");
 
+                    b.HasIndex("FiredByManagerId");
+
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");
 
@@ -293,6 +304,9 @@ namespace TestAbsa.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Phone")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -302,6 +316,8 @@ namespace TestAbsa.Migrations
 
                     b.HasIndex("Email")
                         .IsUnique();
+
+                    b.HasIndex("OrganizationId");
 
                     b.ToTable("Customers");
                 });
@@ -337,6 +353,9 @@ namespace TestAbsa.Migrations
                     b.Property<bool>("IsApproved")
                         .HasColumnType("bit");
 
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
                     b.Property<string>("ReceiptNumber")
                         .HasColumnType("nvarchar(max)");
 
@@ -344,6 +363,8 @@ namespace TestAbsa.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
 
                     b.ToTable("Expenses");
                 });
@@ -377,6 +398,9 @@ namespace TestAbsa.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("PaidDate")
                         .HasColumnType("datetime2");
 
@@ -389,6 +413,8 @@ namespace TestAbsa.Migrations
 
                     b.HasIndex("InvoiceNumber")
                         .IsUnique();
+
+                    b.HasIndex("OrganizationId");
 
                     b.ToTable("Invoices");
                 });
@@ -409,6 +435,9 @@ namespace TestAbsa.Migrations
                     b.Property<int>("InvoiceId")
                         .HasColumnType("int");
 
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
                     b.Property<int>("Quantity")
                         .HasColumnType("int");
 
@@ -418,6 +447,8 @@ namespace TestAbsa.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("InvoiceId");
+
+                    b.HasIndex("OrganizationId");
 
                     b.ToTable("InvoiceItems");
                 });
@@ -850,6 +881,11 @@ namespace TestAbsa.Migrations
                         .HasForeignKey("ApprovedByManagerId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("TestAbsa.Data.ApplicationUser", "FiredByManager")
+                        .WithMany()
+                        .HasForeignKey("FiredByManagerId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("TestAbsa.Data.Models.Organization", "Organization")
                         .WithMany("Employees")
                         .HasForeignKey("OrganizationId")
@@ -858,13 +894,38 @@ namespace TestAbsa.Migrations
 
                     b.HasOne("TestAbsa.Data.ApplicationUser", "RejectedByManager")
                         .WithMany()
-                        .HasForeignKey("RejectedByManagerId");
+                        .HasForeignKey("RejectedByManagerId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("ApprovedByManager");
+
+                    b.Navigation("FiredByManager");
 
                     b.Navigation("Organization");
 
                     b.Navigation("RejectedByManager");
+                });
+
+            modelBuilder.Entity("TestAbsa.Data.Models.Customer", b =>
+                {
+                    b.HasOne("TestAbsa.Data.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("TestAbsa.Data.Models.Expense", b =>
+                {
+                    b.HasOne("TestAbsa.Data.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
                 });
 
             modelBuilder.Entity("TestAbsa.Data.Models.Invoice", b =>
@@ -875,7 +936,15 @@ namespace TestAbsa.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("TestAbsa.Data.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Customer");
+
+                    b.Navigation("Organization");
                 });
 
             modelBuilder.Entity("TestAbsa.Data.Models.InvoiceItem", b =>
@@ -883,10 +952,18 @@ namespace TestAbsa.Migrations
                     b.HasOne("TestAbsa.Data.Models.Invoice", "Invoice")
                         .WithMany("InvoiceItems")
                         .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TestAbsa.Data.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Invoice");
+
+                    b.Navigation("Organization");
                 });
 
             modelBuilder.Entity("TestAbsa.Data.Models.LeaveRequest", b =>
@@ -894,7 +971,7 @@ namespace TestAbsa.Migrations
                     b.HasOne("TestAbsa.Data.ApplicationUser", "Employee")
                         .WithMany()
                         .HasForeignKey("EmployeeId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("TestAbsa.Data.ApplicationUser", "Manager")
@@ -1000,7 +1077,7 @@ namespace TestAbsa.Migrations
                     b.HasOne("TestAbsa.Data.ApplicationUser", "Employee")
                         .WithMany()
                         .HasForeignKey("EmployeeId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("TestAbsa.Data.Models.Organization", "Organization")
@@ -1016,13 +1093,6 @@ namespace TestAbsa.Migrations
                     b.Navigation("Organization");
                 });
 
-            modelBuilder.Entity("TestAbsa.Data.Models.Organization", b =>
-                {
-                    b.Navigation("Employees");
-
-                    b.Navigation("Products");
-                });
-
             modelBuilder.Entity("TestAbsa.Data.Models.Customer", b =>
                 {
                     b.Navigation("Invoices");
@@ -1031,6 +1101,13 @@ namespace TestAbsa.Migrations
             modelBuilder.Entity("TestAbsa.Data.Models.Invoice", b =>
                 {
                     b.Navigation("InvoiceItems");
+                });
+
+            modelBuilder.Entity("TestAbsa.Data.Models.Organization", b =>
+                {
+                    b.Navigation("Employees");
+
+                    b.Navigation("Products");
                 });
 
             modelBuilder.Entity("TestAbsa.Data.Models.Supplier", b =>

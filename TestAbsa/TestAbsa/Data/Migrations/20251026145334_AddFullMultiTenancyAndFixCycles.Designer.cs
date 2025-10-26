@@ -12,8 +12,8 @@ using TestAbsa.Data;
 namespace TestAbsa.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251023191850_AddMultiTenancySchema")]
-    partial class AddMultiTenancySchema
+    [Migration("20251026145334_AddFullMultiTenancyAndFixCycles")]
+    partial class AddFullMultiTenancyAndFixCycles
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -183,6 +183,12 @@ namespace TestAbsa.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("bit");
 
+                    b.Property<string>("FiredByManagerId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime?>("FiredDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -195,6 +201,9 @@ namespace TestAbsa.Migrations
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsApproved")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsFired")
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsRejected")
@@ -257,6 +266,8 @@ namespace TestAbsa.Migrations
 
                     b.HasIndex("ApprovedByManagerId");
 
+                    b.HasIndex("FiredByManagerId");
+
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");
 
@@ -270,6 +281,179 @@ namespace TestAbsa.Migrations
                     b.HasIndex("RejectedByManagerId");
 
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("TestAbsa.Data.Models.Customer", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.HasIndex("OrganizationId");
+
+                    b.ToTable("Customers");
+                });
+
+            modelBuilder.Entity("TestAbsa.Data.Models.Expense", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("ApprovedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ApprovedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Category")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsApproved")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ReceiptNumber")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Vendor")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.ToTable("Expenses");
+                });
+
+            modelBuilder.Entity("TestAbsa.Data.Models.Invoice", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("DueDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("InvoiceNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("PaidDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("InvoiceNumber")
+                        .IsUnique();
+
+                    b.HasIndex("OrganizationId");
+
+                    b.ToTable("Invoices");
+                });
+
+            modelBuilder.Entity("TestAbsa.Data.Models.InvoiceItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("InvoiceId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvoiceId");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.ToTable("InvoiceItems");
                 });
 
             modelBuilder.Entity("TestAbsa.Data.Models.LeaveRequest", b =>
@@ -700,6 +884,11 @@ namespace TestAbsa.Migrations
                         .HasForeignKey("ApprovedByManagerId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("TestAbsa.Data.ApplicationUser", "FiredByManager")
+                        .WithMany()
+                        .HasForeignKey("FiredByManagerId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("TestAbsa.Data.Models.Organization", "Organization")
                         .WithMany("Employees")
                         .HasForeignKey("OrganizationId")
@@ -708,13 +897,76 @@ namespace TestAbsa.Migrations
 
                     b.HasOne("TestAbsa.Data.ApplicationUser", "RejectedByManager")
                         .WithMany()
-                        .HasForeignKey("RejectedByManagerId");
+                        .HasForeignKey("RejectedByManagerId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("ApprovedByManager");
+
+                    b.Navigation("FiredByManager");
 
                     b.Navigation("Organization");
 
                     b.Navigation("RejectedByManager");
+                });
+
+            modelBuilder.Entity("TestAbsa.Data.Models.Customer", b =>
+                {
+                    b.HasOne("TestAbsa.Data.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("TestAbsa.Data.Models.Expense", b =>
+                {
+                    b.HasOne("TestAbsa.Data.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("TestAbsa.Data.Models.Invoice", b =>
+                {
+                    b.HasOne("TestAbsa.Data.Models.Customer", "Customer")
+                        .WithMany("Invoices")
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TestAbsa.Data.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("TestAbsa.Data.Models.InvoiceItem", b =>
+                {
+                    b.HasOne("TestAbsa.Data.Models.Invoice", "Invoice")
+                        .WithMany("InvoiceItems")
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TestAbsa.Data.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Invoice");
+
+                    b.Navigation("Organization");
                 });
 
             modelBuilder.Entity("TestAbsa.Data.Models.LeaveRequest", b =>
@@ -722,7 +974,7 @@ namespace TestAbsa.Migrations
                     b.HasOne("TestAbsa.Data.ApplicationUser", "Employee")
                         .WithMany()
                         .HasForeignKey("EmployeeId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("TestAbsa.Data.ApplicationUser", "Manager")
@@ -828,7 +1080,7 @@ namespace TestAbsa.Migrations
                     b.HasOne("TestAbsa.Data.ApplicationUser", "Employee")
                         .WithMany()
                         .HasForeignKey("EmployeeId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("TestAbsa.Data.Models.Organization", "Organization")
@@ -842,6 +1094,16 @@ namespace TestAbsa.Migrations
                     b.Navigation("Employee");
 
                     b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("TestAbsa.Data.Models.Customer", b =>
+                {
+                    b.Navigation("Invoices");
+                });
+
+            modelBuilder.Entity("TestAbsa.Data.Models.Invoice", b =>
+                {
+                    b.Navigation("InvoiceItems");
                 });
 
             modelBuilder.Entity("TestAbsa.Data.Models.Organization", b =>
