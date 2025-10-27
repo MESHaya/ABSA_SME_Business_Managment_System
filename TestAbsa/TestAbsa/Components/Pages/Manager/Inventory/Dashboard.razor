@@ -3,28 +3,26 @@
 @using TestAbsa.Data.Models
 @using TestAbsa.Services
 @using Microsoft.AspNetCore.Authorization
-@inject TestAbsa.Services.IInventoryService InventoryService
+@inject IInventoryService InventoryService
 @inject NavigationManager NavigationManager
 @attribute [Authorize(Roles = "Manager")]
 
 <PageTitle>Manager Inventory Dashboard</PageTitle>
 
 <div class="container-fluid mt-4">
+
     <!-- Header Section -->
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
         <h3 class="text-primary mb-2 mb-md-0">📦 Inventory Management Dashboard</h3>
-
         <div class="btn-group" role="group" aria-label="Inventory actions">
-            <a href="/Manager/Inventory/CreatePurchaseOrder" class="btn btn-success d-flex align-items-center shadow-sm">
+            <a href="/manager/inventory/create-purchase-order" class="btn btn-success d-flex align-items-center shadow-sm">
                 <i class="oi oi-cart me-2"></i>
                 <span>Create Purchase Order</span>
             </a>
-
             <a href="/manager/inventory/add-product" class="btn btn-primary d-flex align-items-center shadow-sm">
                 <i class="oi oi-plus me-2"></i>
                 <span>Add Product</span>
             </a>
-
             <a href="/manager/stock-requests" class="btn btn-warning d-flex align-items-center shadow-sm">
                 <i class="oi oi-clipboard me-2"></i>
                 <span>Stock Requests</span>
@@ -36,56 +34,48 @@
     <div class="row g-3 mb-4">
         <div class="col-md-3 col-sm-6">
             <div class="card text-white bg-primary shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="card-title mb-1">Total Products</h6>
-                            <h2 class="mb-0">@Products.Count</h2>
-                        </div>
-                        <i class="oi oi-box" style="font-size: 2.5rem; opacity: 0.7;"></i>
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-1">Total Products</h6>
+                        <h2 class="mb-0">@Products.Count</h2>
                     </div>
+                    <i class="oi oi-box" style="font-size: 2.5rem; opacity: 0.7;"></i>
                 </div>
             </div>
         </div>
 
         <div class="col-md-3 col-sm-6">
             <div class="card text-white bg-danger shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="card-title mb-1">Low Stock Items</h6>
-                            <h2 class="mb-0">@lowStockCount</h2>
-                        </div>
-                        <i class="oi oi-warning" style="font-size: 2.5rem; opacity: 0.7;"></i>
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-1">Low Stock Items</h6>
+                        <h2 class="mb-0">@lowStockCount</h2>
                     </div>
+                    <i class="oi oi-warning" style="font-size: 2.5rem; opacity: 0.7;"></i>
                 </div>
             </div>
         </div>
 
         <div class="col-md-3 col-sm-6">
             <div class="card text-white bg-info shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="card-title mb-1">Pending Deliveries</h6>
-                            <h2 class="mb-0">@pendingDeliveries</h2>
-                        </div>
-                        <i class="oi oi-truck" style="font-size: 2.5rem; opacity: 0.7;"></i>
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-1">Pending Deliveries</h6>
+                        <h2 class="mb-0">@pendingDeliveries</h2>
                     </div>
+                    <i class="oi oi-truck" style="font-size: 2.5rem; opacity: 0.7;"></i>
                 </div>
             </div>
         </div>
 
         <div class="col-md-3 col-sm-6">
             <div class="card text-white bg-warning shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="card-title mb-1 text-dark">PO Issues</h6>
-                            <h2 class="mb-0 text-dark">@poIssuesCount</h2>
-                        </div>
-                        <i class="oi oi-flag text-dark" style="font-size: 2.5rem; opacity: 0.7;"></i>
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-1 text-dark">PO Issues</h6>
+                        <h2 class="mb-0 text-dark">@poIssuesCount</h2>
                     </div>
+                    <i class="oi oi-flag text-dark" style="font-size: 2.5rem; opacity: 0.7;"></i>
                 </div>
             </div>
         </div>
@@ -120,7 +110,7 @@
                                 <tr>
                                     <td><strong>#@po.Id</strong></td>
                                     <td>
-                                        <strong>@po.Product?.ItemName</strong><br/>
+                                        <strong>@po.Product?.ItemName</strong><br />
                                         <small class="text-muted">@po.Product?.SKU</small>
                                     </td>
                                     <td>@po.Supplier?.Name</td>
@@ -137,7 +127,7 @@
                                     </td>
                                     <td>@po.OrderDate.ToString("yyyy-MM-dd")</td>
                                     <td>
-                                        <a href="/manager/purchase-order"class="btn btn-sm btn-outline-primary">
+                                        <a href="/manager/purchase-order" class="btn btn-sm btn-outline-primary">
                                             <i class="oi oi-eye"></i> View
                                         </a>
                                     </td>
@@ -157,8 +147,7 @@
             </div>
             <div class="card-body">
                 <div class="alert alert-info mb-0">
-                    <i class="oi oi-info me-2"></i>
-                    No purchase orders yet. Click "Create Purchase Order" to get started!
+                    <i class="oi oi-info me-2"></i> No purchase orders yet. Click "Create Purchase Order" to get started!
                 </div>
             </div>
         </div>
@@ -215,9 +204,7 @@
                                         }
                                     </td>
                                     <td>@product.SKU</td>
-                                    <td class="text-center">
-                                        <strong>@product.CurrentStock</strong>
-                                    </td>
+                                    <td class="text-center"><strong>@product.CurrentStock</strong></td>
                                     <td class="text-center">@product.MinLevel</td>
                                     <td>R @product.Price.ToString("N2")</td>
                                     <td>@(product.Supplier?.Name ?? "N/A")</td>
@@ -263,18 +250,21 @@
             }
         </div>
     </div>
+
 </div>
+
 @code {
     private List<Product> Products { get; set; } = new List<Product>();
-    private List<PurchaseOrder> recentPurchaseOrders = new List<PurchaseOrder>();
+    private List<PurchaseOrder> recentPurchaseOrders { get; set; } = new List<PurchaseOrder>();
+
     private bool IsLoading = true;
     private int lowStockCount = 0;
     private int pendingDeliveries = 0;
     private int poIssuesCount = 0;
-
     private int OrganizationId = 0;
 
-    [CascadingParameter] private Task<AuthenticationState> authenticationStateTask { get; set; }
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -286,10 +276,11 @@
     {
         var authState = await authenticationStateTask;
         var user = authState.User;
-
         var orgClaim = user.FindFirst("OrganizationId")?.Value;
+
         if (!int.TryParse(orgClaim, out int orgId))
-            orgId = 0; // fallback if claim missing
+            orgId = 0;
+
         OrganizationId = orgId;
     }
 
@@ -299,8 +290,7 @@
         {
             // Filter products by organization
             var allProducts = await InventoryService.GetAllProductsAsync(includeSuppliers: true);
-            Products = allProducts.Where(p => p.OrganizationId == OrganizationId).ToList();
-
+            Products = allProducts.ToList();
             lowStockCount = Products.Count(p => p.CurrentStock <= p.MinLevel);
 
             // Filter purchase orders by organization
@@ -311,11 +301,7 @@
                 .ToList();
 
             // Calculate KPIs
-            pendingDeliveries = recentPurchaseOrders.Count(po =>
-                po.Status == "Ordered" ||
-                po.Status == "Shipped" ||
-                po.Status == "PartiallyReceived");
-
+            pendingDeliveries = recentPurchaseOrders.Count(po => po.Status == "Ordered" || po.Status == "Shipped" || po.Status == "PartiallyReceived");
             poIssuesCount = recentPurchaseOrders.Count(po => po.Status == "Issue");
         }
         catch (Exception ex)
@@ -337,7 +323,7 @@
 
     private void QuickReorder(int productId)
     {
-        NavigationManager.NavigateTo($"/Manager/Inventory/CreatePurchaseOrder?ProductId={productId}");
+        NavigationManager.NavigateTo($"/manager/inventory/create-purchase-order?ProductId={productId}");
     }
 
     private string GetStatusBadgeClass(string status) => status switch
@@ -351,4 +337,3 @@
         _ => "bg-secondary"
     };
 }
-

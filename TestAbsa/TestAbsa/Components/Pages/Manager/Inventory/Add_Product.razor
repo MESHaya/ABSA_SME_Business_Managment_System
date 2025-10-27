@@ -107,6 +107,12 @@
                         <ValidationMessage For="@(() => NewSupplier.Email)" />
                     </div>
 
+                    <div class="mb-3">
+                        <label for="Email" class="form-label">Suppliers Address</label>
+                        <InputText id="Email" class="form-control" @bind-Value="NewSupplier.Address" />
+                        <ValidationMessage For="@(() => NewSupplier.Address)" />
+                    </div>
+
                     <button type="submit" class="btn btn-success mt-3">Add Supplier</button>
 
                     @if (!string.IsNullOrEmpty(SupplierMessage))

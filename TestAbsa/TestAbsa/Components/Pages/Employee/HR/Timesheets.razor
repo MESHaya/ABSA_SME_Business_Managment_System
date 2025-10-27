@@ -158,6 +158,8 @@
     private bool isSubmitting = false;
     private string? timesheetMessage;
     private string? currentUserId;
+    private int? currentOrganizationId;
+
 
     protected override async Task OnInitializedAsync()
     {
@@ -178,20 +180,21 @@
             var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
             var user = await UserManager.GetUserAsync(authState.User);
             currentUserId = user?.Id;
+            currentOrganizationId = user?.OrganizationId; // ✅ Capture org ID
 
-            // Initialize with EmployeeId to pass validation
             timesheetEntry = new TimesheetEntry
-            {
-                EmployeeId = currentUserId ?? string.Empty,
-                WorkDate = DateTime.Today,
-                HoursWorked = 8.0m
-            };
+                {
+                    EmployeeId = currentUserId ?? string.Empty,
+                    WorkDate = DateTime.Today,
+                    HoursWorked = 8.0m
+                };
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error loading user: {ex.Message}");
         }
     }
+
 
     private async Task LoadRecentTimesheets()
     {
@@ -240,17 +243,25 @@
             // ✅ Fresh context for submission
             using var context = await DbContextFactory.CreateDbContextAsync();
 
-            var newEntry = new TimesheetEntry
+            if (!currentOrganizationId.HasValue)
             {
-                EmployeeId = currentUserId,
-                WorkDate = timesheetEntry.WorkDate,
-                HoursWorked = timesheetEntry.HoursWorked,
-                ProjectName = timesheetEntry.ProjectName,
-                TaskType = timesheetEntry.TaskType,
-                Description = timesheetEntry.Description,
-                CreatedDate = DateTime.UtcNow,
-                IsApproved = false
-            };
+                timesheetMessage = "Error: Your account is not linked to any organization.";
+                return;
+            }
+
+            var newEntry = new TimesheetEntry
+                {
+                    EmployeeId = currentUserId,
+                    WorkDate = timesheetEntry.WorkDate,
+                    HoursWorked = timesheetEntry.HoursWorked,
+                    ProjectName = timesheetEntry.ProjectName,
+                    TaskType = timesheetEntry.TaskType,
+                    Description = timesheetEntry.Description,
+                    CreatedDate = DateTime.UtcNow,
+                    IsApproved = false,
+                    OrganizationId = currentOrganizationId.Value // ✅ Fixes CS0266 error
+                };
+
 
             context.TimesheetEntries.Add(newEntry);
             await context.SaveChangesAsync();
