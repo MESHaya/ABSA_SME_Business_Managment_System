@@ -148,6 +148,9 @@
             Console.WriteLine($"Logout failed: {ex.Message}");
 
             // Optionally display a message to the user
+
+            Console.WriteLine("Re-routing to Login Page");
+            NavigationManager.NavigateTo("/", forceLoad: true);
         }
     }
 
