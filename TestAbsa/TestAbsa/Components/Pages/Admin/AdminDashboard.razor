@@ -103,6 +103,7 @@
 </div>
 
 @code {
+
     private List<Organization> organizations = new();
     private string? creationMessage;
 
@@ -130,14 +131,26 @@
     // LOGOUT METHOD ADDED HERE
     private async Task Logout()
     {
-        // 1. Sign the user out
-        await SignInManager.SignOutAsync();
+        try
+        {
+            // 1. Sign the user out
+            await SignInManager.SignOutAsync();
 
-        // 2. Redirect to the login page ("/")
-        // The 'forceLoad: true' is recommended for security actions like logout/login
-        // to ensure the entire page and authentication state is reloaded.
-        NavigationManager.NavigateTo("/", forceLoad: true);
+            // 2. Clear any additional state if needed (optional)
+            // e.g., clear local storage or cached variables
+
+            // 3. Redirect to the login page
+            // forceLoad:true ensures the full page reload and resets authentication state
+            NavigationManager.NavigateTo("/", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Logout failed: {ex.Message}");
+
+            // Optionally display a message to the user
+        }
     }
+
 
     private void CheckValues()
     {
