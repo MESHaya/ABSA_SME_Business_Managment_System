@@ -3,14 +3,17 @@
 @inject IInventoryService InventoryService
 @inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
+@inject IDbContextFactory<ApplicationDbContext> ContextFactory
 
+@using Microsoft.EntityFrameworkCore
+@using TestAbsa.Data
 @using TestAbsa.Data.Models
 @using System.Security.Claims
 
 <PageTitle>Manage Stock Requests</PageTitle>
 <NavLink class="btn btn-primary mt-3" href="/manager/inventory/dashboard">
-                ← 
-            </NavLink>
+    ←
+</NavLink>
 
 <div class="container mt-5">
     <h3 class="text-primary mb-4">
@@ -233,28 +236,39 @@
     private string currentManagerName = string.Empty;
     private int? managerOrganizationId = null;
 
-
     protected override async Task OnInitializedAsync()
     {
         await LoadManagerInfo();
-        await LoadRequests();
+        if (managerOrganizationId.HasValue)
+        {
+            await LoadRequests();
+        }
+        else
+        {
+            alertMessage = "Manager does not have an assigned organization. Cannot load requests.";
+            isSuccess = false;
+            isLoading = false;
+        }
     }
 
     private async Task LoadManagerInfo()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
+        var userClaims = authState.User;
 
-        if (user.Identity?.IsAuthenticated == true)
-        {
-            currentManagerId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "Unknown";
-            currentManagerName = user.Identity.Name ?? "Unknown Manager";
+        if (userClaims.Identity?.IsAuthenticated != true) return;
 
-            // Assuming your claims contain OrganizationId
-            var orgIdClaim = user.FindFirst("OrganizationId")?.Value;
-            if (int.TryParse(orgIdClaim, out var orgId))
-                managerOrganizationId = orgId;
-        }
+        currentManagerId = userClaims.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+        currentManagerName = userClaims.Identity.Name ?? "Unknown Manager";
+
+        // ✅ Fetch organization from database instead of claims
+        using var context = await ContextFactory.CreateDbContextAsync();
+        var manager = await context.Users
+            .Where(u => u.Id == currentManagerId)
+            .Select(u => new { u.OrganizationId })
+            .FirstOrDefaultAsync();
+
+        managerOrganizationId = manager?.OrganizationId;
     }
 
     private async Task LoadRequests()
@@ -264,7 +278,6 @@
         {
             var allRequests = await InventoryService.GetAllStockRequestsAsync();
 
-            // Filter by manager's organization
             var orgRequests = allRequests
                 .Where(r => r.OrganizationId == managerOrganizationId.Value)
                 .ToList();
@@ -282,7 +295,6 @@
             isLoading = false;
         }
     }
-
 
     private void ShowReviewModal(StockRequest request, bool approve)
     {
@@ -303,17 +315,12 @@
     {
         if (selectedRequest == null) return;
 
-        // Validation for rejection notes
-        if (!isApproving && string.IsNullOrWhiteSpace(managerNotes))
-        {
-            return;
-        }
+        if (!isApproving && string.IsNullOrWhiteSpace(managerNotes)) return;
 
         try
         {
             var status = isApproving ? "Approved" : "Rejected";
 
-            // Update the request notes with manager's notes if provided
             if (!string.IsNullOrWhiteSpace(managerNotes))
             {
                 selectedRequest.Notes = $"[Manager: {currentManagerName}] {managerNotes}";
@@ -330,7 +337,6 @@
             {
                 isSuccess = true;
                 alertMessage = $"Request #{selectedRequest.Id} has been {status.ToLower()} successfully!";
-
                 CloseModal();
                 await LoadRequests();
             }
