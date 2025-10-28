@@ -52,6 +52,6 @@ namespace TestAbsa.Services
         Task<decimal> GetTotalInvoiceAmountAsync();
         Task<decimal> GetTotalPaidInvoicesAsync();
         Task<decimal> GetTotalOutstandingInvoicesAsync();
-
+      
     }
 }

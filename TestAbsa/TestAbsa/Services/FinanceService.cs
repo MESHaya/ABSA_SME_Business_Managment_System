@@ -269,14 +269,30 @@ namespace TestAbsa.Services
                 using var context = CreateContext();
                 invoice.CreatedDate = DateTime.UtcNow;
                 invoice.InvoiceNumber = GenerateInvoiceNumber();
-                invoice.OrganizationId = await GetUserOrganizationIdAsync();
+
+                // 1. Get the OrganizationId once
+                var orgId = await GetUserOrganizationIdAsync();
+
+                // 2. Set OrganizationId on the parent Invoice
+                invoice.OrganizationId = orgId;
+
+                // 3. ✅ THE FIX: Loop through child items and set their OrganizationId
+                if (invoice.InvoiceItems != null)
+                {
+                    foreach (var item in invoice.InvoiceItems)
+                    {
+                        item.OrganizationId = orgId;
+                    }
+                }
+
                 context.Invoices.Add(invoice);
-                await context.SaveChangesAsync();
+                await context.SaveChangesAsync(); // This will now succeed
                 _logger.LogInformation("Invoice {InvoiceId} created successfully", invoice.Id);
                 return invoice;
             }
             catch (Exception ex)
             {
+                // This log will now contain the *real* inner exception if something else is wrong
                 _logger.LogError(ex, "Error adding invoice");
                 throw;
             }
