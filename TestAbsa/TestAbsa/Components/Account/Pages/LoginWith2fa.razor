@@ -62,6 +62,9 @@
         // Ensure the user has gone through the username & password screen first
         user = await SignInManager.GetTwoFactorAuthenticationUserAsync() ??
             throw new InvalidOperationException("Unable to load two-factor authentication user.");
+
+        // Add this line for safety
+        ReturnUrl ??= "/";
     }
 
     private async Task OnValidSubmitAsync()
@@ -73,27 +76,53 @@
         if (result.Succeeded)
         {
             Logger.LogInformation("User with ID '{UserId}' logged in with 2fa.", userId);
-            RedirectManager.RedirectTo(ReturnUrl);
+
+           
+            if (!string.IsNullOrEmpty(ReturnUrl) && ReturnUrl != "/")
+            {
+                RedirectManager.RedirectTo(ReturnUrl);
+                return; // Important: exit after redirect
+            }
+
+            // FALLBACK: If ReturnUrl is empty, find the user's dashboard by role
+            var roles = await UserManager.GetRolesAsync(user);
+
+            if (roles.Contains("Admin"))
+            {
+                RedirectManager.RedirectTo("/admin/dashboard");
+            }
+            else if (roles.Contains("Manager"))
+            {
+                RedirectManager.RedirectTo("/manager/dashboard");
+            }
+            else if (roles.Contains("Employee"))
+            {
+                RedirectManager.RedirectTo("/employee/dashboard");
+            }
+            else
+            {
+                RedirectManager.RedirectTo("/"); // Default fallback
+            }
         }
         else if (result.IsLockedOut)
         {
-            Logger.LogWarning("User with ID '{UserId}' account locked out.", userId);
+            Logger.LogWarning("User '{UserId}' account locked out.", user.Id);
             RedirectManager.RedirectTo("Account/Lockout");
         }
         else
         {
-            Logger.LogWarning("Invalid authenticator code entered for user with ID '{UserId}'.", userId);
+            Logger.LogWarning("Invalid authenticator code entered for user '{UserId}'.", user.Id);
             message = "Error: Invalid authenticator code.";
         }
     }
 
     private sealed class InputModel
     {
-        [Required]
+       [Required]
         [StringLength(7, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
         [DataType(DataType.Text)]
         [Display(Name = "Authenticator code")]
-        public string? TwoFactorCode { get; set; }
+        public string TwoFactorCode { get; set; } = "";
 
         [Display(Name = "Remember this machine")]
         public bool RememberMachine { get; set; }
