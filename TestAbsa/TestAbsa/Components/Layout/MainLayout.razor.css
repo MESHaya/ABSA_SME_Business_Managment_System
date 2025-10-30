@@ -1,0 +1,97 @@
+/* --- Main Layout Styles --- */
+:root {
+    --primary-color: #002147;
+    --accent-color: #e31837;
+    --text-color: #333;
+    --background-color: #f9f9f9;
+    --navbar-height: 64px;
+    --border-radius: 12px;
+}
+
+/* Ensure full height layout */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+/* Layout container - this is critical for sticky footer */
+.layout-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Top navbar (fixed positioning if needed) */
+.top-navbar {
+    flex-shrink: 0;
+    position: relative;
+    z-index: 100; /* Keep navbar on top */
+}
+
+/* Header section */
+.header {
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10; /* Below navbar */
+    margin-top: 0;
+}
+
+/* Page content - grows to fill space */
+.page-content {
+    flex: 1 0 auto;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.content {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Card styling for content areas */
+.content-card {
+    background: #fff;
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Footer wrapper - keeps footer at bottom */
+.app-footer {
+    flex-shrink: 0;
+    margin-top: auto;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .page-content {
+        padding: 1rem;
+    }
+
+    .content-card {
+        padding: 1rem;
+    }
+}
+
+/* Blazor Error UI */
+#blazor-error-ui {
+    background: lightyellow;
+    bottom: 0;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+    display: none;
+    left: 0;
+    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+}
+
+    #blazor-error-ui .dismiss {
+        cursor: pointer;
+        position: absolute;
+        right: 0.75rem;
+        top: 0.5rem;
+    }

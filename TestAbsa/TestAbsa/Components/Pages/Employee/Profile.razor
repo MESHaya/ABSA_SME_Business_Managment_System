@@ -1,0 +1,94 @@
+﻿@page "/employee/profile"
+@using System.ComponentModel.DataAnnotations
+@inject NavigationManager NavigationManager
+
+<h3>Employee Profile</h3>
+
+<div class="card p-4 shadow-sm" style="max-width: 600px;">
+    <EditForm Model="@employeeProfile" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label class="form-label">Full Name</label>
+            <InputText @bind-Value="employeeProfile.FullName" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Email</label>
+            <InputText @bind-Value="employeeProfile.Email" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Phone</label>
+            <InputText @bind-Value="employeeProfile.Phone" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Department</label>
+            <InputText @bind-Value="employeeProfile.Department" class="form-control" />
+        </div>
+
+        <div class="d-flex justify-content-between mt-4">
+            <button type="submit" class="btn btn-primary px-4">Update Profile</button>
+
+            <!-- Navigation Buttons -->
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-secondary" @onclick="GoToTimesheets">Timesheets</button>
+                <button type="button" class="btn btn-outline-success" @onclick="GoToLeaveRequests">Leave Requests</button>
+            </div>
+        </div>
+    </EditForm>
+
+    @if (submitted)
+    {
+        <div class="alert alert-success mt-3">
+            ✅ Profile updated successfully!
+        </div>
+    }
+</div>
+
+@code {
+    private EmployeeProfile employeeProfile = new EmployeeProfile
+    {
+        FullName = "John Doe",
+        Email = "john.doe@example.com",
+        Phone = "+27 82 123 4567",
+        Department = "Finance"
+    };
+
+    private bool submitted = false;
+
+    private void HandleValidSubmit()
+    {
+        // TODO: Save updates to DB/service later
+        submitted = true;
+    }
+
+    private void GoToTimesheets()
+    {
+        NavigationManager.NavigateTo("/employee/timesheets");
+    }
+
+    private void GoToLeaveRequests()
+    {
+        NavigationManager.NavigateTo("/employee/leave-requests");
+    }
+
+    public class EmployeeProfile
+    {
+        [Required(ErrorMessage = "Full Name is required")]
+        public string FullName { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Email is required")]
+        [EmailAddress(ErrorMessage = "Invalid email address")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Phone is required")]
+        [Phone(ErrorMessage = "Invalid phone number")]
+        public string Phone { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Department is required")]
+        public string Department { get; set; } = string.Empty;
+    }
+}

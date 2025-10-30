@@ -1,0 +1,189 @@
+﻿@page "/employee/inventory/add-product"
+@rendermode InteractiveServer
+@using TestAbsa.Data.Models
+@using TestAbsa.Services
+@inject InventoryService InventoryService
+@inject TestAbsa.Services.IInventoryService InventoryService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Add New Product</PageTitle>
+
+<NavLink class="btn btn-primary mt-3" href="/employee/inventory/dashboard">
+                ← 
+            </NavLink>
+
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-lg-6 col-md-12">
+            @* --- 1. ADD NEW PRODUCT FORM --- *@
+            <h3 class="mb-4 text-primary">Add New Product</h3>
+            <EditForm Model="@NewProduct" OnValidSubmit="@HandleProductSubmit" FormName="AddProduct">
+                <DataAnnotationsValidator />
+                <div class="card p-4 shadow-sm">
+
+                    <div class="mb-3">
+                        <label for="ItemName" class="form-label">Product Name</label>
+                        <InputText id="ItemName" class="form-control" @bind-Value="NewProduct.ItemName" />
+                        <ValidationMessage For="@(() => NewProduct.ItemName)" />
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="SKU" class="form-label">SKU</label>
+                            <InputText id="SKU" class="form-control" @bind-Value="NewProduct.SKU" />
+                            <ValidationMessage For="@(() => NewProduct.SKU)" />
+                        </div>
+                        <div class="col-md-6">
+                            <label for="Price" class="form-label">Unit Price</label>
+                            <InputNumber id="Price" class="form-control" @bind-Value="NewProduct.Price" />
+                            <ValidationMessage For="@(() => NewProduct.Price)" />
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            @* PROPERTY NAME CHANGED: Quantity -> CurrentStock *@
+                            <label for="CurrentStock" class="form-label">Initial Quantity</label>
+                            <InputNumber id="CurrentStock" class="form-control" @bind-Value="NewProduct.CurrentStock" />
+                            <ValidationMessage For="@(() => NewProduct.CurrentStock)" />
+                        </div>
+                        <div class="col-md-6">
+                            <label for="MinLevel" class="form-label">Low Stock Threshold</label>
+                            <InputNumber id="MinLevel" class="form-control" @bind-Value="NewProduct.MinLevel" />
+                            <ValidationMessage For="@(() => NewProduct.MinLevel)" />
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="Supplier" class="form-label">Supplier</label>
+                        <InputSelect id="Supplier" class="form-select" @bind-Value="NewProduct.SupplierId">
+                            <option value="">-- Select or Add New Supplier --</option>
+                            @foreach (var supplier in Suppliers)
+                            {
+                                @* PROPERTY NAME CHANGED: supplier.SupplierId -> supplier.Id *@
+                                <option value="@supplier.Id">@supplier.Name</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="@(() => NewProduct.SupplierId)" />
+                    </div>
+
+                    <button type="submit" class="btn btn-primary mt-3">Add Product</button>
+
+                    @if (!string.IsNullOrEmpty(ProductMessage))
+                    {
+                        <div class="mt-3 alert alert-success">@ProductMessage</div>
+                    }
+                </div>
+            </EditForm>
+        </div>
+
+        <div class="col-lg-6 col-md-12 mt-5 mt-lg-0">
+            @* --- 2. ADD NEW SUPPLIER FORM --- *@
+            <h3 class="mb-4 text-success">Add New Supplier</h3>
+            <EditForm Model="@NewSupplier" OnValidSubmit="@HandleSupplierSubmit" FormName="AddSupplier">
+                <DataAnnotationsValidator />
+                <div class="card p-4 shadow-sm bg-light">
+
+                    <div class="mb-3">
+                        <label for="SupplierName" class="form-label">Supplier Name</label>
+                        <InputText id="SupplierName" class="form-control" @bind-Value="NewSupplier.Name" />
+                        <ValidationMessage For="@(() => NewSupplier.Name)" />
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="ContactPerson" class="form-label">Contact Person</label>
+                            <InputText id="ContactPerson" class="form-control" @bind-Value="NewSupplier.ContactPerson" />
+                        </div>
+                        <div class="col-md-6">
+                            <label for="Phone" class="form-label">Phone</label>
+                            <InputText id="Phone" class="form-control" @bind-Value="NewSupplier.Phone" />
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="Email" class="form-label">Email</label>
+                        <InputText id="Email" class="form-control" @bind-Value="NewSupplier.Email" />
+                        <ValidationMessage For="@(() => NewSupplier.Email)" />
+                    </div>
+
+                    <button type="submit" class="btn btn-success mt-3">Add Supplier</button>
+
+                    @if (!string.IsNullOrEmpty(SupplierMessage))
+                    {
+                        <div class="mt-3 alert alert-success">@SupplierMessage</div>
+                    }
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    // Models for the two forms
+    private Product NewProduct { get; set; } = new Product();
+    private Supplier NewSupplier { get; set; } = new Supplier();
+
+    // Lists for the Select dropdown
+    private List<Supplier> Suppliers { get; set; } = new List<Supplier>();
+
+    // Messages for user feedback
+    private string ProductMessage { get; set; } = string.Empty;
+    private string SupplierMessage { get; set; } = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSuppliers();
+    }
+
+    private async Task LoadSuppliers()
+    {
+        Suppliers = await InventoryService.GetAllSuppliersAsync();
+    }
+
+    // --- Form Handlers ---
+    private async Task HandleProductSubmit()
+    {
+        try
+        {
+            // PROPERTY NAME CHANGED: NewProduct.Quantity -> NewProduct.CurrentStock
+            if (NewProduct.MinLevel >= NewProduct.CurrentStock)
+            {
+                ProductMessage = "Warning: Low Stock Threshold should be less than the Initial Quantity.";
+                return;
+            }
+
+            // Note: The CurrentStock value from the form is added to the database.
+            await InventoryService.AddProductAsync(NewProduct);
+            ProductMessage = $"Success! Product '{NewProduct.ItemName}' added to inventory.";
+
+            // Reset form for next entry
+            NewProduct = new Product();
+            // Reload suppliers in case a supplier was added without a full page refresh
+            await LoadSuppliers();
+        }
+        catch (Exception ex)
+        {
+            ProductMessage = $"An error occurred while adding the product: {ex.Message}";
+        }
+    }
+
+    private async Task HandleSupplierSubmit()
+    {
+        try
+        {
+            await InventoryService.AddSupplierAsync(NewSupplier);
+            SupplierMessage = $"Success! Supplier '{NewSupplier.Name}' added.";
+
+            // Reload suppliers so the Product dropdown updates
+            await LoadSuppliers();
+
+            // Reset form
+            NewSupplier = new Supplier();
+        }
+        catch (Exception ex)
+        {
+            SupplierMessage = $"An error occurred while adding the supplier: {ex.Message}";
+        }
+    }
+}

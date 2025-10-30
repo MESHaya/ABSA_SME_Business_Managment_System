@@ -1,0 +1,10 @@
+
+.vs/
+*.vsidx
+*.db-shm
+*.db-wal
+*.bin
+obj/
+bin/
+*.db-shm
+*.db-wal

@@ -1,0 +1,263 @@
+﻿@page "/employee/finance/create-invoice"
+
+@using TestAbsa.Data.Models
+@using TestAbsa.Services
+@inject IFinanceService FinanceService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@rendermode InteractiveServer
+
+<PageTitle>Create Invoice</PageTitle>
+
+@code {
+    [SupplyParameterFromForm]
+    private Invoice? invoice { get; set; } = new()
+    {
+        InvoiceItems = new List<InvoiceItem>()
+    };
+
+    private List<Customer> customers = new();
+    private bool isLoading = true;
+    private string submissionMessage = string.Empty;
+    private bool isSuccess = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            customers = await FinanceService.GetAllCustomersAsync();
+            Console.WriteLine($"Loaded {customers.Count} customers successfully.");
+        }
+        catch (Exception ex)
+        {
+            submissionMessage = $"Error loading customers: {ex.Message}";
+            isSuccess = false;
+            Console.WriteLine($"[ERROR] Failed to load customers: {ex}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void RecalculateTotal()
+    {
+        if (invoice?.InvoiceItems != null)
+        {
+            invoice.Amount = invoice.InvoiceItems.Sum(i => (decimal)(i.Quantity * i.UnitPrice));
+        }
+        StateHasChanged();
+    }
+private async Task AddItem()
+{
+    Console.WriteLine("ADD ITEM CLICKED!"); // Add this line
+    
+    invoice ??= new Invoice { InvoiceItems = new List<InvoiceItem>() };
+    invoice.InvoiceItems ??= new List<InvoiceItem>();
+
+    invoice.InvoiceItems.Add(new InvoiceItem
+    {
+        Description = "",
+        Quantity = 1,
+        UnitPrice = 0
+    });
+
+    RecalculateTotal();
+    await JS.InvokeVoidAsync("console.log", $"Item added. Total: {invoice.Amount}");
+}
+
+    private async Task RemoveItem(InvoiceItem item)
+    {
+        invoice?.InvoiceItems?.Remove(item);
+        RecalculateTotal();
+        await JS.InvokeVoidAsync("console.log", "Item removed from invoice.");
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (invoice == null)
+        {
+            submissionMessage = "Invoice data is missing.";
+            isSuccess = false;
+            return;
+        }
+
+        RecalculateTotal();
+
+        if (invoice.CustomerId == 0)
+        {
+            submissionMessage = "Please select a valid customer.";
+            isSuccess = false;
+            return;
+        }
+
+        if (invoice.InvoiceItems == null || invoice.InvoiceItems.Count == 0)
+        {
+            submissionMessage = "Please add at least one invoice item.";
+            isSuccess = false;
+            return;
+        }
+
+        if (invoice.Amount <= 0)
+        {
+            submissionMessage = "Total amount must be greater than zero.";
+            isSuccess = false;
+            return;
+        }
+
+        try
+        {
+            await FinanceService.AddInvoiceAsync(invoice);
+            isSuccess = true;
+            submissionMessage = "Invoice created successfully! Redirecting...";
+
+            // Reset form
+            invoice = new Invoice { InvoiceItems = new List<InvoiceItem>() };
+
+            await Task.Delay(1500);
+            Navigation.NavigateTo("/employee/finance/invoices");
+        }
+        catch (Exception ex)
+        {
+            submissionMessage = $"Error creating invoice: {ex.Message}";
+            isSuccess = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/employee/finance/invoices");
+    }
+}
+
+<div class="card shadow-lg p-4 mx-auto my-5" style="max-width: 900px; border-radius: 0.75rem;">
+    <h3 class="card-title text-primary mb-4 text-center fw-bold">Create New Invoice</h3>
+    <p class="text-muted text-center mb-4">Fill in the invoice details and add items below.</p>
+
+    @if (isLoading)
+    {
+        <div class="text-center p-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading customers...</span>
+            </div>
+            <p class="mt-2">Loading customers...</p>
+        </div>
+    }
+    else
+    {
+        <EditForm Model="@invoice" OnValidSubmit="HandleValidSubmit" Formname ="CreateInvoiceForm">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <!-- Customer -->
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Customer</label>
+                <InputSelect @bind-Value="invoice.CustomerId" class="form-select">
+                    <option value="0">-- Select Customer --</option>
+                    @foreach (var c in customers)
+                    {
+                        <option value="@c.Id">@c.Name</option>
+                    }
+                </InputSelect>
+                <ValidationMessage For="@(() => invoice.CustomerId)" />
+            </div>
+
+            <!-- Invoice Number -->
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Invoice Number</label>
+                <InputText class="form-control" @bind-Value="invoice.InvoiceNumber" />
+                <ValidationMessage For="@(() => invoice.InvoiceNumber)" />
+            </div>
+
+            <!-- Due Date -->
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Due Date</label>
+                <InputDate class="form-control" @bind-Value="invoice.DueDate" />
+                <ValidationMessage For="@(() => invoice.DueDate)" />
+            </div>
+
+            <!-- Notes -->
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Notes</label>
+                <InputTextArea class="form-control" @bind-Value="invoice.Notes" rows="3" />
+            </div>
+
+            <!-- Invoice Items -->
+            <h5 class="mt-4 fw-bold text-primary">Invoice Items</h5>
+            <div class="table-responsive">
+                <table class="table table-bordered align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Description</th>
+                            <th style="width: 120px;">Quantity</th>
+                            <th style="width: 150px;">Unit Price (R)</th>
+                            <th style="width: 150px;">Total (R)</th>
+                            <th style="width: 80px;" class="text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (invoice?.InvoiceItems != null && invoice.InvoiceItems.Any())
+                        {
+                            @foreach (var item in invoice.InvoiceItems)
+                            {
+                                <tr>
+                                    <td>
+                                        <InputText class="form-control" @bind-Value="item.Description" placeholder="Item description..." />
+                                    </td>
+                                    <td>
+                                        <InputNumber class="form-control" @bind-Value="item.Quantity" @bind-Value:after="RecalculateTotal" />
+                                    </td>
+                                    <td>
+                                        <InputNumber class="form-control" @bind-Value="item.UnitPrice" @bind-Value:after="RecalculateTotal" />
+                                    </td>
+                                    <td class="text-end fw-semibold">
+                                        @((item.Quantity * item.UnitPrice).ToString("N2"))
+                                    </td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-danger btn-sm" @onclick="() => RemoveItem(item)" title="Remove item">
+                                            🗑️
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    No items added yet. Click "Add Item" below to get started.
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+           <button type="button" class="btn btn-outline-primary mb-4" @onclick="AddItem" @onclick:preventDefault="true">
+    ➕ Add Item
+</button>
+
+            <!-- Total -->
+            <div class="mt-3 p-3 bg-light rounded">
+                <div class="row">
+                    <div class="col text-end">
+                        <h5 class="mb-0"><strong>Total Amount:</strong> <span class="text-primary">R @(invoice?.Amount.ToString("N2"))</span></h5>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit -->
+            <div class="d-grid gap-2 mt-4">
+                <button type="submit" class="btn btn-primary btn-lg">Create Invoice</button>
+                <button type="button" class="btn btn-outline-secondary btn-lg" @onclick="Cancel">Cancel</button>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(submissionMessage))
+            {
+                <div class="alert @(isSuccess ? "alert-success" : "alert-danger") mt-3 text-center" role="alert">
+                    @submissionMessage
+                </div>
+            }
+        </EditForm>
+    }
+</div>

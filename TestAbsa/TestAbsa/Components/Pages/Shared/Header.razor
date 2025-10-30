@@ -1,0 +1,54 @@
+﻿@namespace TestAbsa
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@using TestAbsa.Data.Models
+@using TestAbsa.Data
+
+<div class="user-header-wrapper">
+    <div class="user-header text-center">
+        @if (IsLoading)
+        {
+            <p class="loading">Loading user info...</p>
+        }
+        else if (CurrentUser != null)
+        {
+            <h2> Welcome @CurrentUser.FullName</h2>
+            
+        }
+        else
+        {
+            <p class="text-danger">User not found or not logged in.</p>
+        }
+    </div>
+</div>
+
+@code {
+    private ApplicationUser? CurrentUser;
+    private bool IsLoading = true;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            
+            if (user.Identity is not null && user.Identity.IsAuthenticated)
+            {
+                var userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    CurrentUser = await UserManager.FindByIdAsync(userId);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching user info: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+}

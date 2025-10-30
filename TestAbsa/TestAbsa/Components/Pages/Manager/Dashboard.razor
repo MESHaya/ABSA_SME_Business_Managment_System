@@ -1,0 +1,338 @@
+﻿@page "/manager/dashboard"
+@layout TestAbsa.Components.Layout.MainLayout
+@using TestAbsa.Data.Models
+@using TestAbsa.Services
+@inject IInventoryService InventoryService
+@inject IFinanceService FinanceService
+@inject IHRService HRService
+@inject NavigationManager Navigation
+
+<div class="container py-4">
+
+    <!-- Header -->
+    <div class="row mb-3">
+        <div class="col">
+            <h2 class="fw-bold text-primary">Manager Dashboard</h2>
+            <p class="text-muted">At-a-glance view of Finance, Inventory and HR</p>
+        </div>
+    </div>
+
+    <!-- Top KPI Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="card shadow-sm text-center border-0 h-100">
+                <div class="card-body">
+                    <h6 class="text-muted">Total Revenue</h6>
+                    <h3 class="fw-bold">@FormatMoney(financeStats?.GetValueOrDefault("TotalInvoices") ?? 0)</h3>
+                    <small class="text-muted">Paid: @FormatMoney(financeStats?.GetValueOrDefault("PaidInvoices") ?? 0)</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 col-6">
+            <div class="card shadow-sm text-center border-0 h-100">
+                <div class="card-body">
+                    <h6 class="text-muted">Net Revenue</h6>
+                    <h3 class="fw-bold">@FormatMoney(financeStats?.GetValueOrDefault("NetRevenue") ?? 0)</h3>
+                    <small class="text-muted">Expenses: @FormatMoney(financeStats?.GetValueOrDefault("TotalExpenses") ?? 0)</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 col-6">
+            <div class="card shadow-sm text-center border-0 h-100">
+                <div class="card-body">
+                    <h6 class="text-muted">Low Stock Items</h6>
+                    <h3 class="fw-bold text-danger">@lowStockCount</h3>
+                    <small class="text-muted">Total Products: @totalProducts</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 col-6">
+            <div class="card shadow-sm text-center border-0 h-100">
+                <div class="card-body">
+                    <h6 class="text-muted">Pending HR</h6>
+                    <h3 class="fw-bold text-warning">@hrSummary?.PendingLeaveRequests</h3>
+                    <small class="text-muted">Pending Timesheets: @hrSummary?.PendingTimesheets</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alerts and Quick Actions -->
+    <div class="row g-4 mb-4">
+        <!-- Alerts -->
+        <div class="col-md-8">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-0">Actionable Alerts</h5>
+                        <small class="text-white-50">Items that need attention across departments</small>
+                    </div>
+                    <button class="btn btn-light btn-sm" @onclick="NavigateToAlerts">View all</button>
+                </div>
+                <div class="card-body">
+                    @if (alerts == null)
+                    {
+                        <div class="text-muted">Loading alerts...</div>
+                    }
+                    else if (!alerts.Any())
+                    {
+                        <div class="text-success">✅ No outstanding alerts</div>
+                    }
+                    else
+                    {
+                        <ul class="list-unstyled mb-0">
+                            @foreach (var a in alerts)
+                            {
+                                <li class="mb-2">
+                                    <span class="me-2">@a.Icon</span>
+                                    <strong>@a.Title</strong>
+                                    <div class="text-muted">@a.Description</div>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Quick Actions</h5>
+                </div>
+                <div class="card-body d-flex flex-column gap-2">
+                    <NavLink href="/manager/stock-requests" class="btn btn-outline-primary w-100"> Review Stock Requests </NavLink>
+                    <NavLink href="/manager/finance/dashboard" class="btn btn-outline-success w-100"> Approve Expenses </NavLink>
+                    <NavLink href="/manager/hr/dashboard" class="btn btn-outline-warning w-100"> Review Leave </NavLink>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Department Panels -->
+    <div class="row g-4">
+        <!-- Finance Panel -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Finance Summary</h5>
+                </div>
+                <div class="card-body">
+                    @if (financeLoading)
+                    {
+                        <div class="text-muted">Loading finance...</div>
+                    }
+                    else
+                    {
+                        <div class="mb-3">
+                            <h6 class="text-muted mb-1">Outstanding</h6>
+                            <h4 class="fw-bold text-danger">@FormatMoney(financeStats?.GetValueOrDefault("OutstandingInvoices") ?? 0)</h4>
+                        </div>
+                        <div class="mb-3">
+                            <h6 class="text-muted mb-1">Total Expenses</h6>
+                            <h4 class="fw-bold">@FormatMoney(financeStats?.GetValueOrDefault("TotalExpenses") ?? 0)</h4>
+                        </div>
+                        <div>
+                            <h6 class="text-muted mb-1">Pending Expense Claims</h6>
+                            <h4 class="fw-bold text-warning">@pendingExpensesCount</h4>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Inventory Panel -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Inventory Snapshot</h5>
+                </div>
+                <div class="card-body">
+                    @if (inventoryLoading)
+                    {
+                        <div class="text-muted">Loading inventory...</div>
+                    }
+                    else
+                    {
+                        <div class="mb-3">
+                            <h6 class="text-muted mb-1">Low Stock</h6>
+                            <h4 class="fw-bold text-danger">@lowStockCount</h4>
+                        </div>
+                        <div class="mb-3">
+                            <h6 class="text-muted mb-1">Pending Orders</h6>
+                            <h4 class="fw-bold text-info">@pendingPurchaseOrders</h4>
+                        </div>
+                        <div>
+                            <h6 class="text-muted mb-1">Suppliers</h6>
+                            <h4 class="fw-bold">@totalSuppliers</h4>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- HR Panel -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">HR Snapshot</h5>
+                </div>
+                <div class="card-body">
+                    @if (hrLoading)
+                    {
+                        <div class="text-muted">Loading HR...</div>
+                    }
+                    else
+                    {
+                        <div class="mb-3">
+                            <h6 class="text-muted mb-1">Pending Leave</h6>
+                            <h4 class="fw-bold text-warning">@hrSummary?.PendingLeaveRequests</h4>
+                        </div>
+                        <div class="mb-3">
+                            <h6 class="text-muted mb-1">Timesheets Pending</h6>
+                            <h4 class="fw-bold text-secondary">@hrSummary?.PendingTimesheets</h4>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private Dictionary<string, decimal>? financeStats;
+    private HRService.HRSummary? hrSummary;
+    private List<Product>? lowStockProducts;
+    private List<PurchaseOrder>? recentOrders;
+    private List<LeaveRequest>? recentLeaves;
+    private List<AlertItem>? alerts;
+
+    private int totalProducts;
+    private int lowStockCount;
+    private int totalSuppliers;
+    private int pendingPurchaseOrders;
+    private int pendingExpensesCount = 0;
+
+    private bool financeLoading = true;
+    private bool inventoryLoading = true;
+    private bool hrLoading = true;
+
+    private int OrganizationId = 0;
+
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await SetOrganizationId();
+        await LoadAll();
+        BuildAlerts();
+    }
+
+    private async Task SetOrganizationId()
+    {
+        var authState = await authenticationStateTask;
+        var user = authState.User;
+
+        var orgClaim = user.FindFirst("OrganizationId")?.Value;
+        if (!int.TryParse(orgClaim, out int orgId))
+            orgId = 0;
+        OrganizationId = orgId;
+    }
+
+    private async Task LoadAll()
+    {
+        var financeTask = LoadFinance();
+        var inventoryTask = LoadInventory();
+        var hrTask = LoadHr();
+        await Task.WhenAll(financeTask, inventoryTask, hrTask);
+    }
+
+    private async Task LoadFinance()
+    {
+        try
+        {
+            financeLoading = true;
+            financeStats = await FinanceService.GetDashboardStatisticsAsync();
+            var pending = await FinanceService.GetPendingExpensesAsync();
+            pendingExpensesCount = pending?.Count ?? 0;
+        }
+        catch { }
+        finally { financeLoading = false; }
+    }
+
+    private async Task LoadInventory()
+    {
+        try
+        {
+            inventoryLoading = true;
+            var products = (await InventoryService.GetAllProductsAsync(includeSuppliers: true))
+                .ToList();
+
+            totalProducts = products.Count;
+            lowStockCount = products.Count(p => p.CurrentStock < p.MinLevel);
+            lowStockProducts = products
+                .Where(p => p.CurrentStock < p.MinLevel)
+                .OrderBy(p => p.CurrentStock)
+                .Take(8)
+                .ToList();
+
+            var orders = (await InventoryService.GetAllPurchaseOrdersAsync())
+                .Where(o => o.OrganizationId == OrganizationId)
+                .ToList();
+
+            pendingPurchaseOrders = orders.Count(o => o.Status == "Pending" || o.Status == "Ordered");
+            recentOrders = orders.OrderByDescending(o => o.OrderDate).Take(6).ToList();
+
+            var suppliers = (await InventoryService.GetAllSuppliersAsync())
+                .ToList();
+
+            totalSuppliers = suppliers.Count;
+        }
+        catch { }
+        finally { inventoryLoading = false; }
+    }
+
+    private async Task LoadHr()
+    {
+        try
+        {
+            hrLoading = true;
+            hrSummary = await HRService.GetHRSummaryAsync();
+            recentLeaves = (await HRService.GetAllLeaveRequestsAsync())
+                .Where(l => l.OrganizationId == OrganizationId)
+                .ToList();
+        }
+        catch { }
+        finally { hrLoading = false; }
+    }
+
+    private void BuildAlerts()
+    {
+        alerts = new List<AlertItem>();
+
+        if (lowStockCount > 0)
+            alerts.Add(new AlertItem { Icon = "⚠️", Title = "Low stock items", Description = $"{lowStockCount} items below reorder level" });
+
+        if ((financeStats?.GetValueOrDefault("OutstandingInvoices") ?? 0) > 0)
+            alerts.Add(new AlertItem { Icon = "💸", Title = "Outstanding invoices", Description = $"R {financeStats.GetValueOrDefault("OutstandingInvoices"):N2} outstanding" });
+
+        if (hrSummary?.PendingLeaveRequests > 0)
+            alerts.Add(new AlertItem { Icon = "📅", Title = "Pending leave requests", Description = $"{hrSummary.PendingLeaveRequests} requests awaiting review" });
+    }
+
+    private void NavigateToAlerts() => Navigation.NavigateTo("/manager/alerts");
+
+    private string FormatMoney(decimal value) => value.ToString("C");
+
+    private class AlertItem
+    {
+        public string Icon { get; set; } = "";
+        public string Title { get; set; } = "";
+        public string Description { get; set; } = "";
+    }
+}

@@ -1,0 +1,446 @@
+﻿@page "/manager/purchase-order"
+@rendermode InteractiveServer
+
+@using TestAbsa.Data
+@using TestAbsa.Data.Models
+@using TestAbsa.Services
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+
+@inject IInventoryService InventoryService
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+@attribute [Authorize(Roles = "Manager")]
+
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>📦 Purchase Orders</h2>
+        <a href="/Manager/Inventory/CreatePurchaseOrder" class="btn btn-primary">
+            <i class="oi oi-plus"></i> Create New PO
+        </a>
+    </div>
+
+    @if (!string.IsNullOrEmpty(alertMessage))
+    {
+        <div class="alert @alertClass alert-dismissible fade show" role="alert">
+            @alertMessage
+            <button type="button" class="btn-close" @onclick="() => alertMessage = string.Empty"></button>
+        </div>
+    }
+
+    <!-- Filter Tabs -->
+    <ul class="nav nav-tabs mb-3">
+        @foreach (var status in new[] { "All", "Ordered", "Shipped", "PartiallyReceived", "Delivered", "Issue" })
+        {
+            <li class="nav-item">
+                <a class="nav-link @(filterStatus == status ? "active" : "")" @onclick='() => SetFilter(status)' style="cursor:pointer;">
+                    @status (@CountOrders(status))
+                </a>
+            </li>
+        }
+    </ul>
+
+    <!-- Purchase Orders Table -->
+    @if (isLoading)
+    {
+        <div class="text-center p-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2">Loading purchase orders...</p>
+        </div>
+    }
+    else if (!filteredOrders.Any())
+    {
+        <div class="alert alert-info text-center">
+            <h5>No purchase orders found</h5>
+            <p>@(filterStatus == "All" ? "Create your first purchase order to get started!" : $"No orders with status '{filterStatus}'.")</p>
+        </div>
+    }
+    else
+    {
+        <div class="card shadow-sm">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>PO #</th>
+                                <th>Product</th>
+                                <th>Supplier</th>
+                                <th>Quantity</th>
+                                <th>Cost</th>
+                                <th>Status</th>
+                                <th>Order Date</th>
+                                <th>Expected</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var po in filteredOrders)
+                            {
+                                <tr>
+                                    <td><strong>#@po.Id</strong></td>
+                                    <td>
+                                        <strong>@po.Product?.ItemName</strong><br/>
+                                        <small class="text-muted">SKU: @po.Product?.SKU</small>
+                                    </td>
+                                    <td>@po.Supplier?.Name</td>
+                                    <td>
+                                        <span class="badge @(po.IsFullyReceived ? "bg-success" : "bg-warning")">
+                                            @po.ReceivedQuantity / @po.OrderedQuantity
+                                        </span>
+                                    </td>
+                                    <td>R @po.TotalCost.ToString("N2")</td>
+                                    <td><span class="badge @GetStatusBadgeClass(po.Status)">@po.Status</span></td>
+                                    <td>@po.OrderDate.ToString("yyyy-MM-dd")</td>
+                                    <td>@(po.ExpectedDeliveryDate?.ToString("yyyy-MM-dd") ?? "-")</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowDetailsModal(po)">
+                                            <i class="oi oi-eye"></i> View
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Details Modal -->
+@if (selectedPO != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Purchase Order #@selectedPO.Id Details</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h6>Product Information</h6>
+                            <p><strong>Name:</strong> @selectedPO.Product?.ItemName</p>
+                            <p><strong>SKU:</strong> @selectedPO.Product?.SKU</p>
+                            <p><strong>Current Stock:</strong> @selectedPO.Product?.CurrentStock</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Supplier Information</h6>
+                            <p><strong>Name:</strong> @selectedPO.Supplier?.Name</p>
+                            <p><strong>Contact:</strong> @selectedPO.Supplier?.ContactPerson</p>
+                            <p><strong>Phone:</strong> @selectedPO.Supplier?.Phone</p>
+                        </div>
+                    </div>
+
+                    <hr />
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <p><strong>Ordered Quantity:</strong> @selectedPO.OrderedQuantity</p>
+                            <p><strong>Received Quantity:</strong> @selectedPO.ReceivedQuantity</p>
+                            <p><strong>Remaining:</strong> @selectedPO.RemainingQuantity</p>
+                        </div>
+                        <div class="col-md-4">
+                            <p><strong>Unit Cost:</strong> R @selectedPO.UnitCost.ToString("N2")</p>
+                            <p><strong>Total Cost:</strong> R @selectedPO.TotalCost.ToString("N2")</p>
+                        </div>
+                        <div class="col-md-4">
+                            <p><strong>Status:</strong> <span class="badge @GetStatusBadgeClass(selectedPO.Status)">@selectedPO.Status</span></p>
+                            <p><strong>Order Date:</strong> @selectedPO.OrderDate.ToString("yyyy-MM-dd")</p>
+                            @if (selectedPO.ExpectedDeliveryDate.HasValue)
+                            {
+                                <p><strong>Expected:</strong> @selectedPO.ExpectedDeliveryDate.Value.ToString("yyyy-MM-dd")</p>
+                            }
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(selectedPO.Notes))
+                    {
+                        <div class="alert alert-info"><strong>Notes:</strong> @selectedPO.Notes</div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(selectedPO.IssueNotes))
+                    {
+                        <div class="alert alert-danger"><strong>Issue Reported:</strong> @selectedPO.IssueNotes</div>
+                    }
+
+                    <hr />
+
+                    @if (selectedPO.Status != "Delivered" && selectedPO.Status != "Cancelled")
+                    {
+                        <h6>Update Status</h6>
+                        @if (selectedPO.Status == "Ordered")
+                        {
+                            <button class="btn btn-info me-2" @onclick="() => MarkAsShipped(selectedPO.Id)">
+                                <i class="oi oi-truck"></i> Mark as Shipped
+                            </button>
+                        }
+
+                        @if (selectedPO.Status != "Issue" && selectedPO.RemainingQuantity > 0)
+                        {
+                            <button class="btn btn-success me-2" @onclick="() => ShowReceiveStockModal(selectedPO)">
+                                <i class="oi oi-box"></i> Receive Stock
+                            </button>
+                        }
+
+                        <button class="btn btn-warning me-2" @onclick="() => ShowReportIssueModal(selectedPO)">
+                            <i class="oi oi-warning"></i> Report Issue
+                        </button>
+
+                        @if (selectedPO.ReceivedQuantity == 0)
+                        {
+                            <button class="btn btn-danger" @onclick="() => ShowCancelModal(selectedPO)">
+                                <i class="oi oi-x"></i> Cancel Order
+                            </button>
+                        }
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseModal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Receive Stock Modal -->
+@if (showReceiveModal && selectedPO != null)
+{
+    <ReceiveStockModal PO="selectedPO" Quantity="@receiveQuantity" OnClose="CloseReceiveModal" OnConfirm="ConfirmReceiveStock" IsProcessing="@isProcessing" />
+}
+
+<!-- Report Issue Modal -->
+@if (showIssueModal && selectedPO != null)
+{
+    <ReportIssueModal PO="selectedPO" Notes="@issueNotes" OnClose="CloseIssueModal" OnConfirm="ConfirmReportIssue" IsProcessing="@isProcessing" />
+}
+
+<!-- Cancel Order Modal -->
+@if (showCancelModal && selectedPO != null)
+{
+    <CancelOrderModal PO="selectedPO" Reason="@cancelReason" OnClose="CloseCancelModal" OnConfirm="ConfirmCancelOrder" IsProcessing="@isProcessing" />
+}
+
+@code {
+    private List<PurchaseOrder> allOrders = new();
+    private List<PurchaseOrder> filteredOrders = new();
+    private PurchaseOrder? selectedPO;
+
+    private string filterStatus = "All";
+    private bool isLoading = true;
+    private bool isProcessing = false;
+
+    private string alertMessage = string.Empty;
+    private string alertClass = "alert-success";
+
+    private int receiveQuantity = 0;
+    private string issueNotes = string.Empty;
+    private string cancelReason = string.Empty;
+
+    private bool showReceiveModal = false;
+    private bool showIssueModal = false;
+    private bool showCancelModal = false;
+
+    protected override async Task OnInitializedAsync() => await LoadPurchaseOrders();
+
+    private async Task LoadPurchaseOrders()
+    {
+        isLoading = true;
+        try
+        {
+            allOrders = await InventoryService.GetAllPurchaseOrdersAsync();
+            ApplyFilter();
+        }
+        catch (Exception ex)
+        {
+            ShowAlert($"Error loading orders: {ex.Message}", "alert-danger");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void SetFilter(string status)
+    {
+        filterStatus = status;
+        ApplyFilter();
+    }
+
+    private void ApplyFilter() =>
+        filteredOrders = filterStatus == "All"
+            ? allOrders
+            : allOrders.Where(o => o.Status == filterStatus).ToList();
+
+    private int CountOrders(string status) =>
+        status == "All" ? allOrders.Count : allOrders.Count(o => o.Status == status);
+
+    private void ShowDetailsModal(PurchaseOrder po) => selectedPO = po;
+
+    private void CloseModal() => selectedPO = null;
+
+    private async Task MarkAsShipped(int poId)
+    {
+        isProcessing = true;
+        try
+        {
+            await InventoryService.MarkAsShippedAsync(poId, DateTime.UtcNow);
+            ShowAlert("Order marked as shipped!", "alert-success");
+            await LoadPurchaseOrders();
+            CloseModal();
+        }
+        catch (Exception ex)
+        {
+            ShowAlert($"Error: {ex.Message}", "alert-danger");
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private void ShowReceiveStockModal(PurchaseOrder po)
+    {
+        selectedPO = po;
+        receiveQuantity = po.RemainingQuantity;
+        showReceiveModal = true;
+    }
+
+    private void CloseReceiveModal()
+    {
+        showReceiveModal = false;
+        receiveQuantity = 0;
+    }
+
+    private async Task ConfirmReceiveStock()
+    {
+        if (selectedPO == null || receiveQuantity <= 0) return;
+
+        isProcessing = true;
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            var currentUser = await UserManager.GetUserAsync(user);
+
+            if (currentUser != null)
+            {
+                await InventoryService.ReceiveStockAsync(selectedPO.Id, receiveQuantity, currentUser.Id,
+                    currentUser.UserName ?? currentUser.Email ?? "Manager");
+
+                ShowAlert($"Successfully received {receiveQuantity} units!", "alert-success");
+                await LoadPurchaseOrders();
+                CloseReceiveModal();
+                CloseModal();
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowAlert($"Error: {ex.Message}", "alert-danger");
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private void ShowReportIssueModal(PurchaseOrder po)
+    {
+        selectedPO = po;
+        issueNotes = string.Empty;
+        showIssueModal = true;
+    }
+
+    private void CloseIssueModal()
+    {
+        showIssueModal = false;
+        issueNotes = string.Empty;
+    }
+
+    private async Task ConfirmReportIssue()
+    {
+        if (selectedPO == null || string.IsNullOrWhiteSpace(issueNotes)) return;
+
+        isProcessing = true;
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            var currentUser = await UserManager.GetUserAsync(user);
+
+            if (currentUser != null)
+            {
+                await InventoryService.ReportIssueAsync(selectedPO.Id, issueNotes, currentUser.Id);
+                ShowAlert("Issue reported successfully!", "alert-warning");
+                await LoadPurchaseOrders();
+                CloseIssueModal();
+                CloseModal();
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowAlert($"Error: {ex.Message}", "alert-danger");
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private void ShowCancelModal(PurchaseOrder po)
+    {
+        selectedPO = po;
+        cancelReason = string.Empty;
+        showCancelModal = true;
+    }
+
+    private void CloseCancelModal()
+    {
+        showCancelModal = false;
+        cancelReason = string.Empty;
+    }
+
+    private async Task ConfirmCancelOrder()
+    {
+        if (selectedPO == null || string.IsNullOrWhiteSpace(cancelReason)) return;
+
+        isProcessing = true;
+        try
+        {
+            await InventoryService.CancelPurchaseOrderAsync(selectedPO.Id, cancelReason);
+            ShowAlert("Order cancelled successfully!", "alert-info");
+            await LoadPurchaseOrders();
+            CloseCancelModal();
+            CloseModal();
+        }
+        catch (Exception ex)
+        {
+            ShowAlert($"Error: {ex.Message}", "alert-danger");
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private void ShowAlert(string message, string cssClass)
+    {
+        alertMessage = message;
+        alertClass = cssClass;
+    }
+
+    private string GetStatusBadgeClass(string status) => status switch
+    {
+        "Ordered" => "bg-info text-dark",
+        "Shipped" => "bg-primary",
+        "PartiallyReceived" => "bg-warning text-dark",
+        "Delivered" => "bg-success",
+        "Issue" => "bg-danger",
+        "Cancelled" => "bg-secondary",
+        _ => "bg-secondary"
+    };
+}

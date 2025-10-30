@@ -1,0 +1,46 @@
+﻿@* Save this as: Components/Layout/Account.razor *@
+@* This replaces your current Account.razor file *@
+
+@inherits LayoutComponentBase
+@inject NavigationManager NavigationManager
+
+@if (HttpContext is null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <link href="app.css" rel="stylesheet" />
+    <div class="auth-layout-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1 class="auth-brand">TestAbsa SME Portal</h1>
+                <p class="auth-tagline">Manage your business with confidence</p>
+            </div>
+            
+            <div class="auth-body">
+                @Body
+            </div>
+            
+            <div class="auth-footer">
+                <p>&copy; @DateTime.Now.Year TestAbsa. All rights reserved.</p>
+            </div>
+        </div>
+    </div>
+}
+
+
+
+
+@code {
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (HttpContext is null)
+        {
+            NavigationManager.Refresh(forceReload: true);
+        }
+    }
+}

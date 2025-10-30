@@ -1,0 +1,839 @@
+﻿@page "/manager/finance/dashboard"
+@rendermode InteractiveServer
+
+@using TestAbsa.Data.Models
+@using TestAbsa.Services
+@using TestAbsa.Data
+@inject IFinanceService FinanceService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@inject AuthenticationStateProvider AuthStateProvider
+@inject Microsoft.AspNetCore.Identity.UserManager<ApplicationUser> UserManager
+
+<PageTitle>Manager Dashboard</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>Manager Dashboard</h2>
+            <p class="text-muted">Overview and management of all financial operations</p>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (errorMessage != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @errorMessage
+            <button type="button" class="btn-close" @onclick="@(() => errorMessage = null)"></button>
+        </div>
+    }
+    else
+    {
+        @if (successMessage != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                @successMessage
+                <button type="button" class="btn-close" @onclick="@(() => successMessage = null)"></button>
+            </div>
+        }
+
+        <!-- Key Metrics Dashboard -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card bg-primary text-white">
+                    <div class="card-body">
+                        <h6 class="card-title">Total Invoices</h6>
+                        <h3>R @dashboardStats.GetValueOrDefault("TotalInvoices", 0).ToString("N2")</h3>
+                        <small>All time</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body">
+                        <h6 class="card-title">Paid Invoices</h6>
+                        <h3>R @dashboardStats.GetValueOrDefault("PaidInvoices", 0).ToString("N2")</h3>
+                        <small>Collected revenue</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-warning text-dark">
+                    <div class="card-body">
+                        <h6 class="card-title">Outstanding</h6>
+                        <h3>R @dashboardStats.GetValueOrDefault("OutstandingInvoices", 0).ToString("N2")</h3>
+                        <small>To be collected</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-danger text-white">
+                    <div class="card-body">
+                        <h6 class="card-title">Total Expenses</h6>
+                        <h3>R @dashboardStats.GetValueOrDefault("TotalExpenses", 0).ToString("N2")</h3>
+                        <small>Approved expenses</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card bg-info text-white">
+                    <div class="card-body">
+                        <h6 class="card-title">Net Revenue</h6>
+                        <h3>R @dashboardStats.GetValueOrDefault("NetRevenue", 0).ToString("N2")</h3>
+                        <small>Paid invoices minus expenses</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-warning">
+                    <div class="card-body">
+                        <h6 class="card-title">Pending Expenses</h6>
+                        <h3>@pendingExpenses.Count</h3>
+                        <small>Awaiting approval</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-info">
+                    <div class="card-body">
+                        <h6 class="card-title">Active Customers</h6>
+                        <h3>@activeCustomers.Count</h3>
+                        <small>Total: @allCustomers.Count</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <ul class="nav nav-tabs mb-3" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link @(activeTab == "expenses" ? "active" : "")" 
+                type="button"
+                @onclick="@(() => activeTab = "expenses")">
+                    Expense Approval (@pendingExpenses.Count pending)
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link @(activeTab == "invoices" ? "active" : "")" 
+                type="button"
+                @onclick="@(() => activeTab = "invoices")">
+                    Invoice Management
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link @(activeTab == "customers" ? "active" : "")" 
+                type="button"
+                @onclick="@(() => activeTab = "customers")">
+                    Customers
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link @(activeTab == "reports" ? "active" : "")" 
+                type="button"
+                @onclick="@(() => activeTab = "reports")">
+                    Reports
+                </button>
+            </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content">
+            @if (activeTab == "expenses")
+            {
+                <!-- Expense Approval -->
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5>Expense Approval Queue</h5>
+                        <div>
+                            <button class="btn btn-sm btn-outline-warning" type="button" @onclick="@(() => FilterExpensesManager(false))">
+                                Pending (@pendingExpenses.Count)
+                            </button>
+                            <button class="btn btn-sm btn-outline-success" type="button" @onclick="@(() => FilterExpensesManager(true))">
+                                Approved (@approvedExpenses.Count)
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" type="button" @onclick="@(() => FilterExpensesManager(null))">
+                                All (@allExpenses.Count)
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        @if (filteredExpenses.Any())
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Description</th>
+                                            <th>Category</th>
+                                            <th>Vendor</th>
+                                            <th>Receipt #</th>
+                                            <th>Amount</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var expense in filteredExpenses)
+                                        {
+                                            <tr class="@(expense.IsApproved ? "" : "table-warning")">
+                                                <td>@expense.Date.ToString("yyyy-MM-dd")</td>
+                                                <td>@expense.Description</td>
+                                                <td><span class="badge bg-secondary">@expense.Category</span></td>
+                                                <td>@expense.Vendor</td>
+                                                <td>@expense.ReceiptNumber</td>
+                                                <td>R @expense.Amount.ToString("N2")</td>
+                                                <td>
+                                                    @if (expense.IsApproved)
+                                                    {
+                                                        <span class="badge bg-success">Approved</span>
+                                                        <br />
+                                                        <small class="text-muted">by @expense.ApprovedBy</small>
+                                                        <br />
+                                                        <small class="text-muted">@expense.ApprovedDate?.ToString("yyyy-MM-dd")</small>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-warning">Pending</span>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    @if (!expense.IsApproved)
+                                                    {
+                                                        <button class="btn btn-sm btn-success me-2" 
+                                                        type="button"
+                                                        @onclick="@(() => ApproveExpense(expense.Id))">
+                                                            <i class="bi bi-check-circle"></i> Approve
+                                                        </button>
+                                                        <button class="btn btn-sm btn-danger" 
+                                                        type="button"
+                                                        @onclick="@(() => DeleteExpense(expense.Id))">
+                                                            <i class="bi bi-x-circle"></i> Reject
+                                                        </button>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">—</span>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted text-center">No expenses found.</p>
+                        }
+                    </div>
+                </div>
+            }
+            else if (activeTab == "invoices")
+            {
+                <!-- Invoice Management -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5>Invoice Overview</h5>
+                        <div>
+                            @foreach (var status in Enum.GetValues<InvoiceStatus>())
+                            {
+                                var count = allInvoices.Count(i => i.Status == status);
+                                <button class="btn btn-sm btn-outline-@GetStatusColor(status)" 
+                                type="button"
+                                @onclick="@(() => FilterInvoices(status))">
+                                    @status (@count)
+                                </button>
+                            }
+                            <button class="btn btn-sm btn-outline-secondary" 
+                            type="button"
+                            @onclick="@(() => FilterInvoices(null))">
+                                All (@allInvoices.Count)
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        @if (filteredInvoices.Any())
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Invoice #</th>
+                                            <th>Customer</th>
+                                            <th>Created</th>
+                                            <th>Due Date</th>
+                                            <th>Amount</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var invoice in filteredInvoices)
+                                        {
+                                            var isOverdue = invoice.DueDate.HasValue && 
+                                                          invoice.DueDate.Value < DateTime.UtcNow && 
+                                                          invoice.Status != InvoiceStatus.Paid;
+                                            <tr class="@(isOverdue ? "table-danger" : "")">
+                                                <td>@invoice.InvoiceNumber</td>
+                                                <td>@invoice.Customer?.Name</td>
+                                                <td>@invoice.CreatedDate.ToString("yyyy-MM-dd")</td>
+                                                <td>
+                                                    @(invoice.DueDate?.ToString("yyyy-MM-dd") ?? "N/A")
+                                                    @if (isOverdue)
+                                                    {
+                                                        <span class="badge bg-danger ms-2">OVERDUE</span>
+                                                    }
+                                                </td>
+                                                <td>R @invoice.Amount.ToString("N2")</td>
+                                                <td>
+                                                    <div class="btn-group">
+                                                        @foreach (var status in Enum.GetValues<InvoiceStatus>())
+                                                        {
+                                                            <button class="btn btn-sm btn-@(invoice.Status == status ? GetStatusColor(status) : "outline-secondary")" 
+                                                            type="button"
+                                                            @onclick="@(() => UpdateInvoiceStatus(invoice.Id, status))">
+                                                                @status
+                                                            </button>
+                                                        }
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-info me-2" 
+                                                    type="button"
+                                                    @onclick="@(() => DownloadInvoicePdf(invoice.Id, invoice.InvoiceNumber))"
+                                                    disabled="@isDownloading">
+                                                        @if (isDownloading && downloadingInvoiceId == invoice.Id)
+                                                        {
+                                                            <span class="spinner-border spinner-border-sm me-1"></span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <i class="bi bi-file-pdf"></i>
+                                                        }
+                                                        Download PDF
+                                                    </button>
+                                                    <button class="btn btn-sm btn-danger" 
+                                                    type="button"
+                                                    @onclick="@(() => DeleteInvoice(invoice.Id))">
+                                                        <i class="bi bi-trash"></i> Delete
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted text-center">No invoices found.</p>
+                        }
+                    </div>
+                </div>
+            }
+            else if (activeTab == "customers")
+            {
+                <!-- Customer Management -->
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5>Customer Management</h5>
+                        <div>
+                            <button class="btn btn-sm @(customerFilter == true ? "btn-success" : "btn-outline-success")" 
+                            type="button"
+                            @onclick="@(() => FilterCustomers(true))">
+                                Active (@activeCustomers.Count)
+                            </button>
+                            <button class="btn btn-sm @(customerFilter == null ? "btn-secondary" : "btn-outline-secondary")" 
+                            type="button"
+                            @onclick="@(() => FilterCustomers(null))">
+                                All (@allCustomers.Count)
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        @if (filteredCustomers.Any())
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Email</th>
+                                            <th>Phone</th>
+                                            <th>Created</th>
+                                            <th>Status</th>
+                                            <th>Invoices</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var customer in filteredCustomers)
+                                        {
+                                            var customerInvoices = allInvoices.Where(i => i.CustomerId == customer.Id).ToList();
+                                            var totalOwed = customerInvoices
+                                                .Where(i => i.Status != InvoiceStatus.Paid && i.Status != InvoiceStatus.Cancelled)
+                                                .Sum(i => i.Amount);
+
+                                            <tr>
+                                                <td>@customer.Name</td>
+                                                <td>@customer.Email</td>
+                                                <td>@customer.Phone</td>
+                                                <td>@customer.CreatedDate.ToString("yyyy-MM-dd")</td>
+                                                <td>
+                                                    @if (customer.IsActive)
+                                                    {
+                                                        <span class="badge bg-success">Active</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-secondary">Inactive</span>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-primary">@customerInvoices.Count invoices</span>
+                                                    @if (totalOwed > 0)
+                                                    {
+                                                        <br />
+                                                        <small class="text-danger">R @totalOwed.ToString("N2") outstanding</small>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-info me-2" 
+                                                    type="button"
+                                                    @onclick="@(() => ViewCustomerInvoices(customer.Id))">
+                                                        <i class="bi bi-list-ul"></i> View Invoices
+                                                    </button>
+                                                    @if (customer.IsActive)
+                                                    {
+                                                        <button class="btn btn-sm btn-warning" 
+                                                        type="button"
+                                                        @onclick="@(() => DeactivateCustomer(customer.Id))">
+                                                            <i class="bi bi-dash-circle"></i> Deactivate
+                                                        </button>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted text-center">No customers found.</p>
+                        }
+                    </div>
+                </div>
+            }
+            else if (activeTab == "reports")
+            {
+                <!-- Reports and Analytics -->
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5>Expenses by Category</h5>
+                            </div>
+                            <div class="card-body">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Category</th>
+                                            <th>Amount</th>
+                                            <th>Count</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var category in Enum.GetValues<ExpenseCategory>())
+                                        {
+                                            var categoryExpenses = approvedExpenses.Where(e => e.Category == category).ToList();
+                                            var total = categoryExpenses.Sum(e => e.Amount);
+                                            if (total > 0)
+                                            {
+                                                <tr>
+                                                    <td><span class="badge bg-secondary">@category</span></td>
+                                                    <td>R @total.ToString("N2")</td>
+                                                    <td>@categoryExpenses.Count</td>
+                                                </tr>
+                                            }
+                                        }
+                                    </tbody>
+                                    <tfoot>
+                                        <tr class="fw-bold">
+                                            <td>Total</td>
+                                            <td>R @approvedExpenses.Sum(e => e.Amount).ToString("N2")</td>
+                                            <td>@approvedExpenses.Count</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5>Invoice Status Summary</h5>
+                            </div>
+                            <div class="card-body">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Status</th>
+                                            <th>Count</th>
+                                            <th>Total Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var status in Enum.GetValues<InvoiceStatus>())
+                                        {
+                                            var statusInvoices = allInvoices.Where(i => i.Status == status).ToList();
+                                            var total = statusInvoices.Sum(i => i.Amount);
+                                            if (statusInvoices.Any())
+                                            {
+                                                <tr>
+                                                    <td><span class="badge bg-@GetStatusColor(status)">@status</span></td>
+                                                    <td>@statusInvoices.Count</td>
+                                                    <td>R @total.ToString("N2")</td>
+                                                </tr>
+                                            }
+                                        }
+                                    </tbody>
+                                    <tfoot>
+                                        <tr class="fw-bold">
+                                            <td>Total</td>
+                                            <td>@allInvoices.Count</td>
+                                            <td>R @allInvoices.Sum(i => i.Amount).ToString("N2")</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5>Top Customers by Revenue</h5>
+                            </div>
+                            <div class="card-body">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Customer</th>
+                                            <th>Total Invoiced</th>
+                                            <th>Total Paid</th>
+                                            <th>Outstanding</th>
+                                            <th>Invoice Count</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var customer in activeCustomers.OrderByDescending(c => 
+                                          allInvoices.Where(i => i.CustomerId == c.Id && i.Status == InvoiceStatus.Paid).Sum(i => i.Amount)).Take(10))
+                                        {
+                                            var customerInvoices = allInvoices.Where(i => i.CustomerId == customer.Id).ToList();
+                                            var totalInvoiced = customerInvoices.Sum(i => i.Amount);
+                                            var totalPaid = customerInvoices.Where(i => i.Status == InvoiceStatus.Paid).Sum(i => i.Amount);
+                                            var outstanding = customerInvoices
+                                                .Where(i => i.Status != InvoiceStatus.Paid && i.Status != InvoiceStatus.Cancelled)
+                                                .Sum(i => i.Amount);
+
+                                            <tr>
+                                                <td>@customer.Name</td>
+                                                <td>R @totalInvoiced.ToString("N2")</td>
+                                                <td>R @totalPaid.ToString("N2")</td>
+                                                <td>R @outstanding.ToString("N2")</td>
+                                                <td>@customerInvoices.Count</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<script>
+    window.downloadFileFromStream = async (fileName, contentStreamReference) => {
+    const arrayBuffer = await contentStreamReference.arrayBuffer();
+    const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const anchorElement = document.createElement('a');
+    anchorElement.href = url;
+    anchorElement.download = fileName ?? '';
+    anchorElement.click();
+    anchorElement.remove();
+    URL.revokeObjectURL(url);
+    }
+</script>
+
+@code {
+
+    private ApplicationUser? currentManager;
+    private int? managerOrganizationId;
+
+    // --- Dashboard State ---
+    private bool isLoading = true;
+    private bool isDownloading = false;
+    private int downloadingInvoiceId = 0;
+    private string? errorMessage;
+    private string? successMessage;
+    private string activeTab = "expenses";
+    private bool? customerFilter = null;
+
+    private Dictionary<string, decimal> dashboardStats = new();
+
+    private List<Expense> allExpenses = new();
+    private List<Expense> pendingExpenses = new();
+    private List<Expense> approvedExpenses = new();
+    private List<Expense> filteredExpenses = new();
+
+    private List<Invoice> allInvoices = new();
+    private List<Invoice> filteredInvoices = new();
+
+    private List<Customer> allCustomers = new();
+    private List<Customer> activeCustomers = new();
+    private List<Customer> filteredCustomers = new();
+
+    private string approverName = "Manager";
+
+    // --- Initialization ---
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadCurrentManagerAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        var managerId = UserManager.GetUserId(user);
+        if (!string.IsNullOrEmpty(managerId))
+        {
+            currentManager = await UserManager.FindByIdAsync(managerId);
+            managerOrganizationId = currentManager?.OrganizationId;
+
+            if (!managerOrganizationId.HasValue)
+            {
+                errorMessage = "Manager does not have an Organization assigned.";
+            }
+        }
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = null;
+
+            await LoadCurrentManagerAsync();
+            if (!managerOrganizationId.HasValue) return;
+
+            dashboardStats = await FinanceService.GetDashboardStatisticsAsync();
+
+            allExpenses = await FinanceService.GetAllExpensesAsync();
+            pendingExpenses = allExpenses.Where(e => !e.IsApproved).ToList();
+            approvedExpenses = allExpenses.Where(e => e.IsApproved).ToList();
+            filteredExpenses = pendingExpenses;
+
+            allInvoices = await FinanceService.GetAllInvoicesAsync();
+            filteredInvoices = allInvoices;
+
+            allCustomers = await FinanceService.GetAllCustomersAsync();
+            activeCustomers = allCustomers.Where(c => c.IsActive).ToList();
+            filteredCustomers = activeCustomers.Any() ? activeCustomers : allCustomers;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading data: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    // --- Expenses ---
+    private async Task ApproveExpense(int id)
+    {
+        var expense = allExpenses.FirstOrDefault(e => e.Id == id && e.OrganizationId == managerOrganizationId);
+        if (expense == null) return;
+
+        try
+        {
+            await FinanceService.ApproveExpenseAsync(id, approverName);
+            successMessage = "Expense approved successfully";
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error approving expense: {ex.Message}";
+        }
+    }
+
+    private async Task DeleteExpense(int id)
+    {
+        var expense = allExpenses.FirstOrDefault(e => e.Id == id && e.OrganizationId == managerOrganizationId);
+        if (expense == null) return;
+
+        try
+        {
+            await FinanceService.DeleteExpenseAsync(id);
+            successMessage = "Expense deleted successfully";
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error deleting expense: {ex.Message}";
+        }
+    }
+
+    private void FilterExpensesManager(bool? isApproved)
+    {
+        if (isApproved == null)
+            filteredExpenses = allExpenses;
+        else
+            filteredExpenses = allExpenses.Where(e => e.IsApproved == isApproved).ToList();
+    }
+
+    // --- Invoices ---
+    private async Task UpdateInvoiceStatus(int invoiceId, InvoiceStatus status)
+    {
+        var invoice = allInvoices.FirstOrDefault(i => i.Id == invoiceId && i.OrganizationId == managerOrganizationId);
+        if (invoice == null) return;
+
+        try
+        {
+            await FinanceService.UpdateInvoiceStatusAsync(invoiceId, status);
+            successMessage = $"Invoice status updated to {status}";
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error updating invoice status: {ex.Message}";
+        }
+    }
+
+    private async Task DeleteInvoice(int id)
+    {
+        var invoice = allInvoices.FirstOrDefault(i => i.Id == id && i.OrganizationId == managerOrganizationId);
+        if (invoice == null) return;
+
+        try
+        {
+            await FinanceService.DeleteInvoiceAsync(id);
+            successMessage = "Invoice deleted successfully";
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error deleting invoice: {ex.Message}";
+        }
+    }
+
+    private void FilterInvoices(InvoiceStatus? status)
+    {
+        if (status == null)
+            filteredInvoices = allInvoices;
+        else
+            filteredInvoices = allInvoices.Where(i => i.Status == status).ToList();
+    }
+
+    private async Task DownloadInvoicePdf(int invoiceId, string invoiceNumber)
+    {
+        var invoice = allInvoices.FirstOrDefault(i => i.Id == invoiceId && i.OrganizationId == managerOrganizationId);
+        if (invoice == null) return;
+
+        try
+        {
+            isDownloading = true;
+            downloadingInvoiceId = invoiceId;
+            errorMessage = null;
+
+            var pdfBytes = await FinanceService.GenerateInvoicePdfAsync(invoiceId);
+            var fileName = $"Invoice_{invoiceNumber}_{DateTime.Now:yyyyMMdd}.pdf";
+
+            using var streamRef = new DotNetStreamReference(stream: new MemoryStream(pdfBytes));
+            await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+
+            successMessage = $"Invoice {invoiceNumber} downloaded successfully";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error downloading PDF: {ex.Message}";
+        }
+        finally
+        {
+            isDownloading = false;
+            downloadingInvoiceId = 0;
+        }
+    }
+
+    // --- Customers ---
+    private void FilterCustomers(bool? isActive)
+    {
+        customerFilter = isActive;
+
+        if (isActive == null)
+            filteredCustomers = allCustomers;
+        else
+            filteredCustomers = allCustomers.Where(c => c.IsActive == isActive).ToList();
+    }
+
+    private async Task DeactivateCustomer(int id)
+    {
+        var customer = allCustomers.FirstOrDefault(c => c.Id == id && c.OrganizationId == managerOrganizationId);
+        if (customer == null) return;
+
+        try
+        {
+            await FinanceService.DeleteCustomerAsync(id);
+            successMessage = "Customer deactivated successfully";
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error deactivating customer: {ex.Message}";
+        }
+    }
+
+    private void ViewCustomerInvoices(int customerId)
+    {
+        filteredInvoices = allInvoices.Where(i => i.CustomerId == customerId && i.OrganizationId == managerOrganizationId).ToList();
+        activeTab = "invoices";
+    }
+
+    // --- Helpers ---
+    private string GetStatusColor(InvoiceStatus status)
+    {
+        return status switch
+        {
+            InvoiceStatus.Draft => "secondary",
+            InvoiceStatus.Sent => "info",
+            InvoiceStatus.Paid => "success",
+            InvoiceStatus.Overdue => "danger",
+            InvoiceStatus.Cancelled => "dark",
+            _ => "secondary"
+        };
+    }
+}

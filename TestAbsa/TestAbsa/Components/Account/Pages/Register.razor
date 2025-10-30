@@ -1,0 +1,295 @@
+﻿@page "/Account/Register"
+
+@using System.ComponentModel.DataAnnotations
+@using System.Text
+@using System.Text.Encodings.Web
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.WebUtilities
+@using Microsoft.EntityFrameworkCore
+@using TestAbsa.Data
+@using TestAbsa.Data.Models
+
+@inject TestAbsa.Data.ApplicationDbContext Context
+@inject UserManager<ApplicationUser> UserManager
+@inject RoleManager<IdentityRole> RoleManager
+@inject IUserStore<ApplicationUser> UserStore
+@inject SignInManager<ApplicationUser> SignInManager
+@inject IEmailSender<ApplicationUser> EmailSender
+@inject ILogger<Register> Logger
+@inject NavigationManager NavigationManager
+@inject IdentityRedirectManager RedirectManager
+
+<PageTitle>Register</PageTitle>
+
+<h1>Register</h1>
+
+<div class="row">
+    <div class="col-md-4">
+        <StatusMessage Message="@Message" />
+        <EditForm Model="Input" asp-route-returnUrl="@ReturnUrl" method="post" OnValidSubmit="RegisterUser" FormName="register">
+            <DataAnnotationsValidator />
+            <h2>Create a new account.</h2>
+            <hr />
+            <ValidationSummary class="text-danger" role="alert" />
+
+            <div class="form-floating mb-3">
+                <InputText @bind-Value="Input.FirstName" class="form-control" autocomplete="given-name" aria-required="true" placeholder="John" />
+                <label for="first-name">First Name</label>
+                <ValidationMessage For="() => Input.FirstName" class="text-danger" />
+            </div>
+
+            <div class="form-floating mb-3">
+                <InputText @bind-Value="Input.LastName" class="form-control" autocomplete="family-name" aria-required="true" placeholder="Doe" />
+                <label for="last-name">Last Name</label>
+                <ValidationMessage For="() => Input.LastName" class="text-danger" />
+            </div>
+
+            <div class="form-floating mb-3">
+                <InputSelect @bind-Value="Input.SelectedOrganizationId" class="form-select" aria-required="true">
+                    <option value="0">-- Select Existing Organization --</option>
+                    @foreach (var org in Organizations)
+                    {
+                        <option value="@org.Id">@org.Name</option>
+                    }
+                </InputSelect>
+                <label for="organization-id">Organization</label>
+                <ValidationMessage For="() => Input.SelectedOrganizationId" class="text-danger" />
+                @if (Organizations.Count == 0)
+                {
+                    <div class="text-danger mt-2">No organizations found. Please contact an administrator.</div>
+                }
+            </div>
+
+            <div class="form-floating mb-3">
+                <InputText @bind-Value="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
+                <label for="email">Email</label>
+                <ValidationMessage For="() => Input.Email" class="text-danger" />
+            </div>
+
+            <div class="form-floating mb-3">
+                <InputText type="password" @bind-Value="Input.Password" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
+                <label for="password">Password</label>
+                <ValidationMessage For="() => Input.Password" class="text-danger" />
+            </div>
+
+            <div class="form-floating mb-3">
+                <InputText type="password" @bind-Value="Input.ConfirmPassword" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
+                <label for="confirm-password">Confirm Password</label>
+                <ValidationMessage For="() => Input.ConfirmPassword" class="text-danger" />
+            </div>
+
+            <div class="form-floating mb-3">
+                <InputSelect @bind-Value="Input.Role" class="form-select" aria-required="true">
+                    <option value="Employee">Employee</option>
+                    <option value="Manager">Manager</option>
+                </InputSelect>
+                <label for="role">Register As</label>
+                <ValidationMessage For="() => Input.Role" class="text-danger" />
+            </div>
+
+            <div class="alert alert-info" role="alert">
+                <i class="bi bi-info-circle"></i> All accounts require administrator approval before you can sign in.
+            </div>
+
+            <button type="submit" class="w-100 btn btn-lg btn-primary" disabled="@(Organizations.Count == 0)">Register</button>
+        </EditForm>
+        <p class="mt-3">
+            <a href="/?returnUrl=@ReturnUrl">Already have an account? Log in</a>
+        </p>
+    </div>
+</div>
+
+@code {
+    private IEnumerable<IdentityError>? identityErrors;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = new();
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    // Property to hold the list of organizations for the dropdown
+    private List<Organization> Organizations { get; set; } = new List<Organization>();
+
+    private string? Message => identityErrors is null ? null : $"Error: {string.Join(", ", identityErrors.Select(error => error.Description))}";
+
+    // Fetch organizations on component initialization
+    protected override async Task OnInitializedAsync()
+    {
+        Organizations = await Context.Organizations.OrderBy(o => o.Name).ToListAsync();
+    }
+
+    private string GenerateUniqueRandomCode()
+    {
+        // Generates a 5-digit number (10000 to 99999) and formats it as a 5-digit string.
+        return new Random().Next(10000, 99999).ToString("D5");
+    }
+
+    public async Task RegisterUser(EditContext editContext)
+    {
+        // Validate and Parse Organization ID
+        if (!int.TryParse(Input.SelectedOrganizationId, out int orgId) || orgId <= 0)
+        {
+            identityErrors = new[] { new IdentityError { Description = "Please select a valid organization." } };
+            return;
+        }
+
+        // Prevent duplicate registration for approved, active users in the same organization
+        var existingUser = await Context.Users
+            .OfType<ApplicationUser>()
+            .FirstOrDefaultAsync(u =>
+                u.Email == Input.Email &&
+                u.OrganizationId == orgId &&
+                u.IsApproved &&   // Must be approved
+                u.IsActive);      // Must be currently active (not fired)
+
+        if (existingUser != null)
+        {
+            identityErrors = new[] { new IdentityError { Description = $"An approved and active account with the email '{Input.Email}' already exists in this organization." } };
+            return;
+        }
+
+
+        // Create ApplicationUser
+        var user = CreateUser();
+
+        // Assign the selected Organization ID to the user
+        user.OrganizationId = orgId;
+
+        // Set full name, role, and registration date
+        user.FirstName = Input.FirstName.Trim();
+        user.LastName = Input.LastName.Trim();
+        user.FullName = $"{Input.FirstName.Trim()} {Input.LastName.Trim()}";
+        user.UserRole = Input.Role;
+        user.RegistrationDate = DateTime.UtcNow;
+
+        // All users need approval
+        user.IsApproved = false;
+        // Set IsActive to true initially
+        user.IsActive = true;
+
+        // Generate unique Username
+        string rolePrefix = Input.Role[0].ToString().ToUpperInvariant(); // E or M
+        string baseUsername = (rolePrefix + Input.FirstName)
+            .Replace(" ", "") // Remove spaces from first name
+            .ToLowerInvariant(); // Lowercase for consistency
+
+        string generatedUsername;
+        bool isUnique = false;
+        int maxAttempts = 10;
+        int attempt = 0;
+
+        do
+        {
+            string randomCode = GenerateUniqueRandomCode();
+            generatedUsername = baseUsername + randomCode;
+
+            // Check if user already exists with this username
+            if (await UserManager.FindByNameAsync(generatedUsername) == null)
+            {
+                isUnique = true;
+            }
+            attempt++;
+        } while (!isUnique && attempt < maxAttempts);
+
+        if (!isUnique)
+        {
+            identityErrors = new[] { new IdentityError { Description = "Could not generate a unique username. Please try again." } };
+            return;
+        }
+
+        // Set the generated unique username
+        await UserStore.SetUserNameAsync(user, generatedUsername, CancellationToken.None);
+        // Still store their email separately
+        var emailStore = GetEmailStore();
+        await emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
+
+        // Create user in Identity
+        var result = await UserManager.CreateAsync(user, Input.Password);
+
+        if (!result.Succeeded)
+        {
+            identityErrors = result.Errors;
+            return;
+        }
+
+        Logger.LogInformation("User created a new account with password. Username: {Username}, Role: {Role}, Organization ID: {OrganizationId}", generatedUsername, Input.Role, user.OrganizationId);
+
+        // Add to role
+        await UserManager.AddToRoleAsync(user, Input.Role);
+
+        // Email confirmation setup (same as before)
+        var userId = await UserManager.GetUserIdAsync(user);
+        var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
+        code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+        var callbackUrl = NavigationManager.GetUriWithQueryParameters(
+            NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
+            new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = ReturnUrl });
+
+        await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
+
+        // Handle post-registration flow
+        RedirectManager.RedirectTo(
+             "Account/RegisterConfirmation", // Changed to RegisterConfirmation based on standard flow
+             new() { ["email"] = Input.Email, ["returnUrl"] = ReturnUrl });
+    }
+
+    private ApplicationUser CreateUser()
+    {
+        try
+        {
+            return Activator.CreateInstance<ApplicationUser>();
+        }
+        catch
+        {
+            throw new InvalidOperationException($"Can't create an instance of '{nameof(ApplicationUser)}'. " +
+                $"Ensure that '{nameof(ApplicationUser)}' is not an abstract class and has a parameterless constructor.");
+        }
+    }
+
+    private IUserEmailStore<ApplicationUser> GetEmailStore()
+    {
+        if (!UserManager.SupportsUserEmail)
+        {
+            throw new NotSupportedException("The default UI requires a user store with email support.");
+        }
+        return (IUserEmailStore<ApplicationUser>)UserStore;
+    }
+
+    private sealed class InputModel
+    {
+        [Required]
+        [Display(Name = "First Name")]
+        public string FirstName { get; set; } = "";
+
+        [Required]
+        [Display(Name = "Last Name")]
+        public string LastName { get; set; } = "";
+
+        // Field for the selected Organization ID (bound as a string from InputSelect)
+        [Required]
+        [Range(1, int.MaxValue, ErrorMessage = "Please select an existing organization.")]
+        [Display(Name = "Organization")]
+        public string SelectedOrganizationId { get; set; } = "0";
+
+        [Required]
+        [EmailAddress]
+        [Display(Name = "Email")]
+        public string Email { get; set; } = "";
+
+        [Required]
+        [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
+        [DataType(DataType.Password)]
+        [Display(Name = "Password")]
+        public string Password { get; set; } = "";
+
+        [DataType(DataType.Password)]
+        [Display(Name = "Confirm password")]
+        [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
+        public string ConfirmPassword { get; set; } = "";
+
+        [Required]
+        [Display(Name = "Role")]
+        public string Role { get; set; } = "Employee";
+    }
+}

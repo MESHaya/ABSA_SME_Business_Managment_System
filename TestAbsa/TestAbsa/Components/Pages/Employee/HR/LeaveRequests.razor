@@ -1,0 +1,322 @@
+﻿@page "/employee/hr/leave-requests"
+@layout TestAbsa.Components.Layout.MainLayout
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using TestAbsa.Data
+@using TestAbsa.Data.Models
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Components.Authorization
+@inject IDbContextFactory<ApplicationDbContext> DbContextFactory
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+
+<!-- Leave Request Section -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0">
+            <i class="bi bi-calendar-check"></i> Leave Request
+        </h5>
+    </div>
+    <div class="card-body">
+        @if (!string.IsNullOrEmpty(leaveMessage))
+        {
+            <div class="alert @(leaveMessage.StartsWith("Error") ? "alert-danger" : "alert-success") alert-dismissible fade show" role="alert">
+                @leaveMessage
+                <button type="button" class="btn-close" @onclick="() => leaveMessage = null"></button>
+            </div>
+        }
+
+        <EditForm Model="@leaveRequest" OnValidSubmit="@SubmitLeaveRequest">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" />
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Start Date</label>
+                    <InputDate @bind-Value="leaveRequest.StartDate" class="form-control" min="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                    <ValidationMessage For="@(() => leaveRequest.StartDate)" />
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">End Date</label>
+                    <InputDate @bind-Value="leaveRequest.EndDate" class="form-control" min="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                    <ValidationMessage For="@(() => leaveRequest.EndDate)" />
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Leave Type</label>
+                    <InputSelect @bind-Value="leaveRequest.LeaveType" class="form-select">
+                        <option value="">-- Select Leave Type --</option>
+                        <option value="Annual Leave">Annual Leave</option>
+                        <option value="Sick Leave">Sick Leave</option>
+                        <option value="Family Responsibility">Family Responsibility</option>
+                        <option value="Maternity Leave">Maternity Leave</option>
+                        <option value="Paternity Leave">Paternity Leave</option>
+                        <option value="Study Leave">Study Leave</option>
+                        <option value="Unpaid Leave">Unpaid Leave</option>
+                    </InputSelect>
+                    <ValidationMessage For="@(() => leaveRequest.LeaveType)" />
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Total Days</label>
+                    <input type="text" class="form-control" value="@CalculateDays()" readonly />
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label">Reason</label>
+                    <InputTextArea @bind-Value="leaveRequest.Reason" class="form-control" rows="3" placeholder="Please provide a reason for your leave request..." />
+                    <ValidationMessage For="@(() => leaveRequest.Reason)" />
+                </div>
+
+                <div class="col-12">
+                    <button type="submit" class="btn btn-success" disabled="@isSubmittingLeave">
+                        @if (isSubmittingLeave)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        <i class="bi bi-send"></i> Submit Leave Request
+                    </button>
+                    <button type="button" class="btn btn-secondary ms-2" @onclick="ResetLeaveForm">
+                        <i class="bi bi-arrow-counterclockwise"></i> Reset
+                    </button>
+                </div>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+<!-- My Leave Requests -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">
+            <i class="bi bi-list-ul"></i> My Leave Requests
+        </h5>
+    </div>
+    <div class="card-body">
+        @if (isLoadingLeaveRequests)
+        {
+            <div class="text-center text-muted py-3">
+                <span class="spinner-border spinner-border-sm me-2"></span>
+                Loading leave requests...
+            </div>
+        }
+        else if (myLeaveRequests.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Leave Type</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                            <th>Days</th>
+                            <th>Status</th>
+                            <th>Requested</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var leave in myLeaveRequests)
+                        {
+                            <tr>
+                                <td><strong>@leave.LeaveType</strong></td>
+                                <td>@leave.StartDate.ToString("yyyy-MM-dd")</td>
+                                <td>@leave.EndDate.ToString("yyyy-MM-dd")</td>
+                                <td>@leave.TotalDays days</td>
+                                <td>
+                                    <span class="badge @GetStatusBadgeClass(leave.Status)">
+                                        @leave.Status
+                                    </span>
+                                </td>
+                                <td>@leave.RequestDate.ToString("yyyy-MM-dd")</td>
+                            </tr>
+                            @if (!string.IsNullOrEmpty(leave.ManagerComments))
+                            {
+                                <tr>
+                                    <td colspan="6" class="bg-light">
+                                        <small><strong>Manager Comments:</strong> @leave.ManagerComments</small>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="text-muted text-center py-3">
+                No leave requests yet.
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<LeaveRequest> myLeaveRequests = new();
+    private LeaveRequest leaveRequest = new();
+    private bool isLoadingLeaveRequests = false;
+    private bool isSubmittingLeave = false;
+    private string? leaveMessage;
+    private string? currentUserId;
+    private int? currentOrganizationId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // ✅ FIX: Load user first, THEN load leave requests
+        await LoadCurrentUser();
+        
+        // Only load leave requests after we have the user ID
+        if (!string.IsNullOrEmpty(currentUserId))
+        {
+            await LoadMyLeaveRequests();
+        }
+    }
+
+    private async Task LoadCurrentUser()
+    {
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = await UserManager.GetUserAsync(authState.User);
+            currentUserId = user?.Id;
+            currentOrganizationId = user?.OrganizationId;
+
+            // Initialize with EmployeeId to pass validation
+            leaveRequest = new LeaveRequest
+                {
+                    EmployeeId = currentUserId ?? string.Empty,
+                    StartDate = DateTime.Today,
+                    EndDate = DateTime.Today
+                };
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading user: {ex.Message}");
+        }
+    }
+
+
+    private async Task LoadMyLeaveRequests()
+    {
+        if (string.IsNullOrEmpty(currentUserId)) return;
+
+        try
+        {
+            isLoadingLeaveRequests = true;
+            
+            // ✅ Create a fresh context for this operation
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            myLeaveRequests = await context.LeaveRequests
+                .Where(l => l.EmployeeId == currentUserId)
+                .OrderByDescending(l => l.RequestDate)
+                .Take(10)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading leave requests: {ex.Message}");
+            myLeaveRequests = new List<LeaveRequest>();
+        }
+        finally
+        {
+            isLoadingLeaveRequests = false;
+        }
+    }
+
+    private async Task SubmitLeaveRequest()
+    {
+        Console.WriteLine("SubmitLeaveRequest called!");
+        
+        if (string.IsNullOrEmpty(currentUserId))
+        {
+            leaveMessage = "Error: User not authenticated.";
+            return;
+        }
+
+        if (leaveRequest.EndDate < leaveRequest.StartDate)
+        {
+            leaveMessage = "Error: End date cannot be before start date.";
+            return;
+        }
+
+        isSubmittingLeave = true;
+        leaveMessage = null;
+
+        try
+        {
+            // ✅ Fresh context for submission
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var totalDays = (leaveRequest.EndDate - leaveRequest.StartDate).Days + 1;
+
+            if (!currentOrganizationId.HasValue)
+            {
+                leaveMessage = "Error: Your account is not linked to any organization.";
+                return;
+            }
+
+            var newLeave = new LeaveRequest
+                {
+                    EmployeeId = currentUserId,
+                    StartDate = leaveRequest.StartDate,
+                    EndDate = leaveRequest.EndDate,
+                    LeaveType = leaveRequest.LeaveType,
+                    Reason = leaveRequest.Reason,
+                    TotalDays = totalDays,
+                    RequestDate = DateTime.UtcNow,
+                    Status = "Pending",
+                    OrganizationId = currentOrganizationId.Value // ✅ Added this
+                };
+
+            context.LeaveRequests.Add(newLeave);
+            await context.SaveChangesAsync();
+
+            leaveMessage = $"Leave request submitted successfully! ({totalDays} days)";
+            
+            // Reload leave requests after successful submission
+            await LoadMyLeaveRequests();
+            ResetLeaveForm();
+        }
+        catch (Exception ex)
+        {
+            leaveMessage = $"Error: {ex.Message}";
+            Console.WriteLine($"Error submitting leave request: {ex.Message}");
+        }
+        finally
+        {
+            isSubmittingLeave = false;
+        }
+    }
+
+    private void ResetLeaveForm()
+    {
+        leaveRequest = new LeaveRequest
+        {
+            EmployeeId = currentUserId ?? string.Empty,
+            StartDate = DateTime.Today,
+            EndDate = DateTime.Today
+        };
+    }
+
+    private string CalculateDays()
+    {
+        if (leaveRequest.EndDate < leaveRequest.StartDate)
+            return "Invalid dates";
+
+        var days = (leaveRequest.EndDate - leaveRequest.StartDate).Days + 1;
+        return $"{days} day(s)";
+    }
+
+    private string GetStatusBadgeClass(string status)
+    {
+        return status switch
+        {
+            "Approved" => "bg-success",
+            "Rejected" => "bg-danger",
+            _ => "bg-warning"
+        };
+    }
+}

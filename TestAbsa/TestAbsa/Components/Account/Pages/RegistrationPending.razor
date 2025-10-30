@@ -1,0 +1,36 @@
+﻿@page "/Account/RegistrationPending"
+
+<PageTitle>Registration Pending</PageTitle>
+
+<div class="container">
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body text-center">
+                    <div class="mb-4">
+                        <i class="bi bi-hourglass-split" style="font-size: 4rem; color: #0d6efd;"></i>
+                    </div>
+                    <h2>Registration Pending Approval</h2>
+                    <p class="lead">Thank you for registering!</p>
+                    <div class="alert alert-info" role="alert">
+                        <p class="mb-0">
+                            Your employee account has been created successfully. However, you will need to wait for a manager to approve your registration before you can sign in.
+                        </p>
+                    </div>
+                    <p class="text-muted">
+                        You will receive an email notification once your account has been approved.
+                    </p>
+                    <p class="mt-4">
+                        <strong>Email:</strong> @Email
+                    </p>
+                    <a href="/" class="btn btn-primary mt-3">Return to Home</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    private string? Email { get; set; }
+}

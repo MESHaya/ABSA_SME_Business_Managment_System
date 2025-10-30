@@ -1,0 +1,166 @@
+﻿@page "/manager/inventory/edit-product/{ProductId:int}"
+@rendermode InteractiveServer
+@inject IInventoryService InventoryService
+@inject NavigationManager NavigationManager
+
+@using TestAbsa.Data.Models
+
+<PageTitle>Edit Product</PageTitle>
+
+<div class="card shadow-lg p-4 mx-auto my-5" style="max-width: 700px; border-radius: 0.75rem;">
+    <h3 class="card-title text-primary mb-4 text-center fw-bold">Edit Product</h3>
+
+    @if (isLoading)
+    {
+        <div class="text-center p-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2">Loading product details...</p>
+        </div>
+    }
+    else if (ProductModel == null)
+    {
+        <div class="alert alert-danger text-center">
+            <h5 class="alert-heading">Product Not Found!</h5>
+            <p>The product you're trying to edit does not exist.</p>
+            <a href="/manager/inventory/dashboard" class="btn btn-primary mt-3">Return to Dashboard</a>
+        </div>
+    }
+    else
+    {
+        <EditForm Model="@ProductModel" OnValidSubmit="HandleValidSubmit" Enhance>
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" />
+
+            <div class="mb-3">
+                <label for="itemName" class="form-label fw-semibold">Product Name</label>
+                <InputText @bind-Value="ProductModel.ItemName" class="form-control" id="itemName" />
+                <ValidationMessage For="@(() => ProductModel.ItemName)" />
+            </div>
+
+            <div class="mb-3">
+                <label for="sku" class="form-label fw-semibold">SKU</label>
+                <InputText @bind-Value="ProductModel.SKU" class="form-control" id="sku" />
+                <ValidationMessage For="@(() => ProductModel.SKU)" />
+            </div>
+
+            <div class="mb-3">
+                <label for="currentStock" class="form-label fw-semibold">Current Stock</label>
+                <InputNumber @bind-Value="ProductModel.CurrentStock" class="form-control" id="currentStock" />
+                <ValidationMessage For="@(() => ProductModel.CurrentStock)" />
+            </div>
+
+            <div class="mb-3">
+                <label for="minLevel" class="form-label fw-semibold">Minimum Stock Level</label>
+                <InputNumber @bind-Value="ProductModel.MinLevel" class="form-control" id="minLevel" />
+                <ValidationMessage For="@(() => ProductModel.MinLevel)" />
+            </div>
+
+            <div class="mb-3">
+                <label for="price" class="form-label fw-semibold">Price (per unit)</label>
+                <InputNumber @bind-Value="ProductModel.Price" class="form-control" id="price" step="0.01" />
+                <ValidationMessage For="@(() => ProductModel.Price)" />
+            </div>
+
+            <div class="mb-4">
+                <label for="supplier" class="form-label fw-semibold">Supplier (Optional)</label>
+                <InputSelect @bind-Value="ProductModel.SupplierId" class="form-select" id="supplier">
+                    <option value="">-- No Supplier --</option>
+                    @if (SupplierList != null)
+                    {
+                        @foreach (var supplier in SupplierList)
+                        {
+                            <option value="@supplier.Id">@supplier.Name</option>
+                        }
+                    }
+                </InputSelect>
+                <ValidationMessage For="@(() => ProductModel.SupplierId)" />
+            </div>
+
+            <div class="d-flex gap-2 mt-4">
+                <button type="submit" class="btn btn-success flex-fill" disabled="@isProcessing">
+                    @if (isProcessing)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                    }
+                    <i class="oi oi-check me-1"></i> Save Changes
+                </button>
+                <button type="button" class="btn btn-secondary flex-fill" @onclick="CancelEdit" disabled="@isProcessing">
+                    <i class="oi oi-x me-1"></i> Cancel
+                </button>
+            </div>
+        </EditForm>
+
+        @if (!string.IsNullOrEmpty(submissionMessage))
+        {
+            <div class="alert @(isSuccess ? "alert-success" : "alert-danger") mt-4" role="alert">
+                @submissionMessage
+                @if (isSuccess)
+                {
+                    <div class="mt-3">
+                        <a href="/manager/inventory/dashboard" class="btn btn-primary">
+                            <i class="oi oi-arrow-left me-1"></i> Return to Dashboard
+                        </a>
+                    </div>
+                }
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public int ProductId { get; set; }
+
+    private Product? ProductModel { get; set; }
+    private List<Supplier>? SupplierList;
+    private bool isLoading = true;
+    private bool isProcessing = false;
+    private string submissionMessage = string.Empty;
+    private bool isSuccess = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        try
+        {
+            SupplierList = await InventoryService.GetAllSuppliersAsync();
+            ProductModel = await InventoryService.GetProductByIdAsync(ProductId);
+        }
+        catch (Exception ex)
+        {
+            submissionMessage = $"Error loading product: {ex.Message}";
+            isSuccess = false;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (ProductModel == null) return;
+
+        isProcessing = true;
+        submissionMessage = string.Empty;
+        isSuccess = false;
+
+        try
+        {
+            ProductModel.Id = ProductId;
+            await InventoryService.UpdateProductAsync(ProductModel);
+            submissionMessage = "Product updated successfully!";
+            isSuccess = true;
+        }
+        catch (Exception ex)
+        {
+            submissionMessage = $"An error occurred: {ex.Message}";
+            isSuccess = false;
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private void CancelEdit() => NavigationManager.NavigateTo("/manager/inventory/dashboard");
+}

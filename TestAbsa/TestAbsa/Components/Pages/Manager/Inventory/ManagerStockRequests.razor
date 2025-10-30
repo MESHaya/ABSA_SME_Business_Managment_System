@@ -1,0 +1,355 @@
+﻿@page "/manager/stock-requests"
+@rendermode InteractiveServer
+@inject IInventoryService InventoryService
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+@inject IDbContextFactory<ApplicationDbContext> ContextFactory
+
+@using Microsoft.EntityFrameworkCore
+@using TestAbsa.Data
+@using TestAbsa.Data.Models
+@using System.Security.Claims
+
+<PageTitle>Manage Stock Requests</PageTitle>
+<NavLink class="btn btn-primary mt-3" href="/manager/inventory/dashboard">
+    ←
+</NavLink>
+
+<div class="container mt-5">
+    <h3 class="text-primary mb-4">
+        <i class="oi oi-clipboard me-2"></i>Stock Requests Management
+    </h3>
+
+    @if (isLoading)
+    {
+        <div class="d-flex justify-content-center p-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (!PendingRequests.Any() && !ReviewedRequests.Any())
+    {
+        <div class="alert alert-info">
+            <i class="oi oi-info me-2"></i>
+            No stock requests found.
+        </div>
+    }
+    else
+    {
+        <!-- Pending Requests Section -->
+        @if (PendingRequests.Any())
+        {
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="oi oi-clock me-2"></i>Pending Requests (@PendingRequests.Count)
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Request ID</th>
+                                    <th>Employee</th>
+                                    <th>Product</th>
+                                    <th>Quantity</th>
+                                    <th>Request Date</th>
+                                    <th>Notes</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var request in PendingRequests)
+                                {
+                                    <tr>
+                                        <td><strong>#@request.Id</strong></td>
+                                        <td>@request.EmployeeName</td>
+                                        <td>
+                                            @request.Product?.ItemName
+                                            <br />
+                                            <small class="text-muted">SKU: @request.Product?.SKU</small>
+                                        </td>
+                                        <td><span class="badge bg-primary">@request.Quantity</span></td>
+                                        <td>@request.RequestDate.ToString("MMM dd, yyyy")</td>
+                                        <td>
+                                            <small>@(string.IsNullOrEmpty(request.Notes) ? "No notes" : request.Notes)</small>
+                                        </td>
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-success me-1"
+                                                    @onclick="() => ShowReviewModal(request, true)">
+                                                <i class="oi oi-check me-1"></i>Approve
+                                            </button>
+                                            <button class="btn btn-sm btn-danger"
+                                                    @onclick="() => ShowReviewModal(request, false)">
+                                                <i class="oi oi-x me-1"></i>Reject
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Reviewed Requests Section -->
+        @if (ReviewedRequests.Any())
+        {
+            <div class="card shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">
+                        <i class="oi oi-document me-2"></i>Recently Reviewed Requests (@ReviewedRequests.Count)
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Request ID</th>
+                                    <th>Employee</th>
+                                    <th>Product</th>
+                                    <th>Quantity</th>
+                                    <th>Status</th>
+                                    <th>Reviewed By</th>
+                                    <th>Review Date</th>
+                                    <th>Manager Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var request in ReviewedRequests)
+                                {
+                                    var statusClass = request.Status == "Approved" ? "bg-success" : "bg-danger";
+                                    <tr>
+                                        <td><strong>#@request.Id</strong></td>
+                                        <td>@request.EmployeeName</td>
+                                        <td>
+                                            @request.Product?.ItemName
+                                            <br />
+                                            <small class="text-muted">SKU: @request.Product?.SKU</small>
+                                        </td>
+                                        <td><span class="badge bg-primary">@request.Quantity</span></td>
+                                        <td>
+                                            <span class="badge @statusClass">@request.Status</span>
+                                        </td>
+                                        <td>@request.ManagerName</td>
+                                        <td>@request.ReviewDate?.ToString("MMM dd, yyyy HH:mm")</td>
+                                        <td>
+                                            <small>@(string.IsNullOrEmpty(request.Notes) ? "No notes" : request.Notes)</small>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+
+    @if (!string.IsNullOrEmpty(alertMessage))
+    {
+        <div class="alert @(isSuccess ? "alert-success" : "alert-danger") alert-dismissible fade show mt-4" role="alert">
+            @alertMessage
+            <button type="button" class="btn-close" @onclick="() => alertMessage = string.Empty"></button>
+        </div>
+    }
+</div>
+
+<!-- Review Modal -->
+@if (showModal && selectedRequest != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header @(isApproving ? "bg-success" : "bg-danger") text-white">
+                    <h5 class="modal-title">
+                        @(isApproving ? "Approve" : "Reject") Stock Request #@selectedRequest.Id
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <strong>Employee:</strong> @selectedRequest.EmployeeName
+                    </div>
+                    <div class="mb-3">
+                        <strong>Product:</strong> @selectedRequest.Product?.ItemName
+                    </div>
+                    <div class="mb-3">
+                        <strong>Quantity Requested:</strong> @selectedRequest.Quantity
+                    </div>
+                    <div class="mb-3">
+                        <strong>Employee Notes:</strong>
+                        <p class="text-muted">@(string.IsNullOrEmpty(selectedRequest.Notes) ? "No notes provided" : selectedRequest.Notes)</p>
+                    </div>
+
+                    <hr />
+
+                    <div class="mb-3">
+                        <label for="managerNotes" class="form-label fw-semibold">
+                            Manager Notes @(isApproving ? "(Optional)" : "(Required)")
+                        </label>
+                        <textarea @bind="managerNotes"
+                                  class="form-control"
+                                  id="managerNotes"
+                                  rows="4"
+                                  placeholder="Add your review notes here..."></textarea>
+                        @if (!isApproving && string.IsNullOrWhiteSpace(managerNotes))
+                        {
+                            <small class="text-danger">Please provide a reason for rejection.</small>
+                        }
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+                    <button type="button"
+                            class="btn @(isApproving ? "btn-success" : "btn-danger")"
+                            @onclick="ConfirmReview"
+                            disabled="@(!isApproving && string.IsNullOrWhiteSpace(managerNotes))">
+                        <i class="oi @(isApproving ? "oi-check" : "oi-x") me-1"></i>
+                        Confirm @(isApproving ? "Approval" : "Rejection")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<StockRequest> PendingRequests = new();
+    private List<StockRequest> ReviewedRequests = new();
+    private bool isLoading = true;
+    private string alertMessage = string.Empty;
+    private bool isSuccess = false;
+
+    // Modal state
+    private bool showModal = false;
+    private StockRequest? selectedRequest = null;
+    private bool isApproving = false;
+    private string managerNotes = string.Empty;
+
+    // Manager info
+    private string currentManagerId = string.Empty;
+    private string currentManagerName = string.Empty;
+    private int? managerOrganizationId = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadManagerInfo();
+        if (managerOrganizationId.HasValue)
+        {
+            await LoadRequests();
+        }
+        else
+        {
+            alertMessage = "Manager does not have an assigned organization. Cannot load requests.";
+            isSuccess = false;
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadManagerInfo()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userClaims = authState.User;
+
+        if (userClaims.Identity?.IsAuthenticated != true) return;
+
+        currentManagerId = userClaims.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+        currentManagerName = userClaims.Identity.Name ?? "Unknown Manager";
+
+        // ✅ Fetch organization from database instead of claims
+        using var context = await ContextFactory.CreateDbContextAsync();
+        var manager = await context.Users
+            .Where(u => u.Id == currentManagerId)
+            .Select(u => new { u.OrganizationId })
+            .FirstOrDefaultAsync();
+
+        managerOrganizationId = manager?.OrganizationId;
+    }
+
+    private async Task LoadRequests()
+    {
+        isLoading = true;
+        try
+        {
+            var allRequests = await InventoryService.GetAllStockRequestsAsync();
+
+            var orgRequests = allRequests
+                .Where(r => r.OrganizationId == managerOrganizationId.Value)
+                .ToList();
+
+            PendingRequests = orgRequests.Where(r => r.Status == "Pending").ToList();
+            ReviewedRequests = orgRequests.Where(r => r.Status != "Pending").Take(10).ToList();
+        }
+        catch (Exception ex)
+        {
+            alertMessage = $"Error loading requests: {ex.Message}";
+            isSuccess = false;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ShowReviewModal(StockRequest request, bool approve)
+    {
+        selectedRequest = request;
+        isApproving = approve;
+        managerNotes = string.Empty;
+        showModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        selectedRequest = null;
+        managerNotes = string.Empty;
+    }
+
+    private async Task ConfirmReview()
+    {
+        if (selectedRequest == null) return;
+
+        if (!isApproving && string.IsNullOrWhiteSpace(managerNotes)) return;
+
+        try
+        {
+            var status = isApproving ? "Approved" : "Rejected";
+
+            if (!string.IsNullOrWhiteSpace(managerNotes))
+            {
+                selectedRequest.Notes = $"[Manager: {currentManagerName}] {managerNotes}";
+            }
+
+            var success = await InventoryService.ReviewStockRequestAsync(
+                selectedRequest.Id,
+                status,
+                currentManagerId,
+                currentManagerName
+            );
+
+            if (success)
+            {
+                isSuccess = true;
+                alertMessage = $"Request #{selectedRequest.Id} has been {status.ToLower()} successfully!";
+                CloseModal();
+                await LoadRequests();
+            }
+            else
+            {
+                isSuccess = false;
+                alertMessage = "Failed to update the request. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            isSuccess = false;
+            alertMessage = $"Error: {ex.Message}";
+        }
+    }
+}

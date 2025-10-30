@@ -1,0 +1,339 @@
+﻿@page "/manager/inventory/dashboard"
+@rendermode InteractiveServer
+@using TestAbsa.Data.Models
+@using TestAbsa.Services
+@using Microsoft.AspNetCore.Authorization
+@inject IInventoryService InventoryService
+@inject NavigationManager NavigationManager
+@attribute [Authorize(Roles = "Manager")]
+
+<PageTitle>Manager Inventory Dashboard</PageTitle>
+
+<div class="container-fluid mt-4">
+
+    <!-- Header Section -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+        <h3 class="text-primary mb-2 mb-md-0">📦 Inventory Management Dashboard</h3>
+        <div class="btn-group" role="group" aria-label="Inventory actions">
+            <a href="/manager/inventory/create-purchase-order" class="btn btn-success d-flex align-items-center shadow-sm">
+                <i class="oi oi-cart me-2"></i>
+                <span>Create Purchase Order</span>
+            </a>
+            <a href="/manager/inventory/add-product" class="btn btn-primary d-flex align-items-center shadow-sm">
+                <i class="oi oi-plus me-2"></i>
+                <span>Add Product</span>
+            </a>
+            <a href="/manager/stock-requests" class="btn btn-warning d-flex align-items-center shadow-sm">
+                <i class="oi oi-clipboard me-2"></i>
+                <span>Stock Requests</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- KPI Cards Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-sm-6">
+            <div class="card text-white bg-primary shadow-sm h-100">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-1">Total Products</h6>
+                        <h2 class="mb-0">@Products.Count</h2>
+                    </div>
+                    <i class="oi oi-box" style="font-size: 2.5rem; opacity: 0.7;"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 col-sm-6">
+            <div class="card text-white bg-danger shadow-sm h-100">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-1">Low Stock Items</h6>
+                        <h2 class="mb-0">@lowStockCount</h2>
+                    </div>
+                    <i class="oi oi-warning" style="font-size: 2.5rem; opacity: 0.7;"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 col-sm-6">
+            <div class="card text-white bg-info shadow-sm h-100">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-1">Pending Deliveries</h6>
+                        <h2 class="mb-0">@pendingDeliveries</h2>
+                    </div>
+                    <i class="oi oi-truck" style="font-size: 2.5rem; opacity: 0.7;"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 col-sm-6">
+            <div class="card text-white bg-warning shadow-sm h-100">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-1 text-dark">PO Issues</h6>
+                        <h2 class="mb-0 text-dark">@poIssuesCount</h2>
+                    </div>
+                    <i class="oi oi-flag text-dark" style="font-size: 2.5rem; opacity: 0.7;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Purchase Orders Section -->
+    @if (recentPurchaseOrders.Any())
+    {
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">📋 Recent Purchase Orders</h5>
+                <a href="/manager/purchase-order" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>PO #</th>
+                                <th>Product</th>
+                                <th>Supplier</th>
+                                <th>Quantity</th>
+                                <th>Cost</th>
+                                <th>Status</th>
+                                <th>Order Date</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var po in recentPurchaseOrders.Take(5))
+                            {
+                                <tr>
+                                    <td><strong>#@po.Id</strong></td>
+                                    <td>
+                                        <strong>@po.Product?.ItemName</strong><br />
+                                        <small class="text-muted">@po.Product?.SKU</small>
+                                    </td>
+                                    <td>@po.Supplier?.Name</td>
+                                    <td>
+                                        <span class="badge @(po.IsFullyReceived ? "bg-success" : "bg-warning text-dark")">
+                                            @po.ReceivedQuantity / @po.OrderedQuantity
+                                        </span>
+                                    </td>
+                                    <td>R @po.TotalCost.ToString("N2")</td>
+                                    <td>
+                                        <span class="badge @GetStatusBadgeClass(po.Status)">
+                                            @po.Status
+                                        </span>
+                                    </td>
+                                    <td>@po.OrderDate.ToString("yyyy-MM-dd")</td>
+                                    <td>
+                                        <a href="/manager/purchase-order" class="btn btn-sm btn-outline-primary">
+                                            <i class="oi oi-eye"></i> View
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+    else if (!IsLoading)
+    {
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">📋 Recent Purchase Orders</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info mb-0">
+                    <i class="oi oi-info me-2"></i> No purchase orders yet. Click "Create Purchase Order" to get started!
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Current Product Inventory -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">📦 Current Product Inventory</h5>
+        </div>
+        <div class="card-body">
+            @if (IsLoading)
+            {
+                <div class="d-flex justify-content-center p-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            }
+            else if (Products.Count == 0)
+            {
+                <div class="alert alert-warning">
+                    <p class="mb-0">No products found in the inventory. Click "Add Product" to get started.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover table-bordered mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Product Name</th>
+                                <th>SKU</th>
+                                <th class="text-center">Current Stock</th>
+                                <th class="text-center">Min Level</th>
+                                <th>Price</th>
+                                <th>Supplier</th>
+                                <th class="text-center">Status</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var product in Products)
+                            {
+                                var isLowStock = product.CurrentStock <= product.MinLevel;
+                                var rowClass = isLowStock ? "table-danger" : "";
+
+                                <tr class="@rowClass">
+                                    <td>
+                                        <strong>@product.ItemName</strong>
+                                        @if (isLowStock)
+                                        {
+                                            <i class="oi oi-warning text-danger ms-2"></i>
+                                        }
+                                    </td>
+                                    <td>@product.SKU</td>
+                                    <td class="text-center"><strong>@product.CurrentStock</strong></td>
+                                    <td class="text-center">@product.MinLevel</td>
+                                    <td>R @product.Price.ToString("N2")</td>
+                                    <td>@(product.Supplier?.Name ?? "N/A")</td>
+                                    <td class="text-center">
+                                        @if (isLowStock)
+                                        {
+                                            <span class="badge bg-danger">LOW STOCK</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success">OK</span>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="btn-group" role="group">
+                                            <button class="btn btn-sm btn-warning" @onclick="() => EditProduct(product.Id)">
+                                                <i class="oi oi-pencil"></i> Edit
+                                            </button>
+                                            @if (isLowStock)
+                                            {
+                                                <button class="btn btn-sm btn-success" @onclick="() => QuickReorder(product.Id)">
+                                                    <i class="oi oi-cart"></i> Reorder
+                                                </button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <p class="text-muted mb-0">Total products: <strong>@Products.Count</strong></p>
+                    @if (lowStockCount > 0)
+                    {
+                        <div class="alert alert-danger mb-0 py-2 px-3">
+                            <i class="oi oi-warning me-2"></i>
+                            <strong>@lowStockCount</strong> product(s) need reordering
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+</div>
+
+@code {
+    private List<Product> Products { get; set; } = new List<Product>();
+    private List<PurchaseOrder> recentPurchaseOrders { get; set; } = new List<PurchaseOrder>();
+
+    private bool IsLoading = true;
+    private int lowStockCount = 0;
+    private int pendingDeliveries = 0;
+    private int poIssuesCount = 0;
+    private int OrganizationId = 0;
+
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await SetOrganizationId();
+        await LoadDashboardData();
+    }
+
+    private async Task SetOrganizationId()
+    {
+        var authState = await authenticationStateTask;
+        var user = authState.User;
+        var orgClaim = user.FindFirst("OrganizationId")?.Value;
+
+        if (!int.TryParse(orgClaim, out int orgId))
+            orgId = 0;
+
+        OrganizationId = orgId;
+    }
+
+    private async Task LoadDashboardData()
+    {
+        try
+        {
+            // Filter products by organization
+            var allProducts = await InventoryService.GetAllProductsAsync(includeSuppliers: true);
+            Products = allProducts.ToList();
+            lowStockCount = Products.Count(p => p.CurrentStock <= p.MinLevel);
+
+            // Filter purchase orders by organization
+            var allPurchaseOrders = await InventoryService.GetAllPurchaseOrdersAsync();
+            recentPurchaseOrders = allPurchaseOrders
+                .Where(po => po.OrganizationId == OrganizationId)
+                .OrderByDescending(po => po.OrderDate)
+                .ToList();
+
+            // Calculate KPIs
+            pendingDeliveries = recentPurchaseOrders.Count(po => po.Status == "Ordered" || po.Status == "Shipped" || po.Status == "PartiallyReceived");
+            poIssuesCount = recentPurchaseOrders.Count(po => po.Status == "Issue");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading dashboard data: {ex.Message}");
+            Products = new List<Product>();
+            recentPurchaseOrders = new List<PurchaseOrder>();
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void EditProduct(int productId)
+    {
+        NavigationManager.NavigateTo($"/manager/inventory/edit-product/{productId}");
+    }
+
+    private void QuickReorder(int productId)
+    {
+        NavigationManager.NavigateTo($"/manager/inventory/create-purchase-order?ProductId={productId}");
+    }
+
+    private string GetStatusBadgeClass(string status) => status switch
+    {
+        "Ordered" => "bg-info text-dark",
+        "Shipped" => "bg-primary",
+        "PartiallyReceived" => "bg-warning text-dark",
+        "Delivered" => "bg-success",
+        "Issue" => "bg-danger",
+        "Cancelled" => "bg-secondary",
+        _ => "bg-secondary"
+    };
+}

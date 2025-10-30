@@ -1,0 +1,150 @@
+﻿@page "/"
+
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Identity
+@using TestAbsa.Data
+
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@inject ILogger<Login> Logger
+@inject NavigationManager NavigationManager
+@inject IdentityRedirectManager RedirectManager
+
+<PageTitle>Log in</PageTitle>
+
+<h1>Log in</h1>
+<div class="row">
+    <div class="col-md-4">
+        <section>
+            <StatusMessage Message="@errorMessage" />
+            <EditForm Model="Input" OnValidSubmit="LoginUser" FormName="loginForm">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger" />
+                <div class="form-floating mb-3">
+                    <InputText @bind-Value="Input.Email" class="form-control" autocomplete="username" placeholder="Email" />
+                    <label>Email</label>
+                    <ValidationMessage For="() => Input.Email" class="text-danger" />
+                </div>
+                <div class="form-floating mb-3">
+                    <InputText type="password" @bind-Value="Input.Password" class="form-control" autocomplete="current-password" placeholder="Password" />
+                    <label>Password</label>
+                    <ValidationMessage For="() => Input.Password" class="text-danger" />
+                </div>
+                <div class="form-check mb-3">
+                    <InputCheckbox @bind-Value="Input.RememberMe" class="form-check-input" />
+                    <label class="form-check-label">Remember me</label>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Log in</button>
+            </EditForm>
+
+            <div class="mt-3 text-center">
+                <p class="text-muted">Don't have an account?</p>
+                <a href="/Account/Register" class="btn btn-outline-primary w-100">Create an account</a>
+            </div>
+        </section>
+    </div>
+</div>
+
+@code {
+    private string? errorMessage;
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = new();
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (HttpMethods.IsGet(HttpContext.Request.Method))
+        {
+            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+        }
+    }
+
+    public async Task LoginUser()
+    {
+        var user = await UserManager.FindByEmailAsync(Input.Email)
+                   ?? await UserManager.FindByNameAsync(Input.Email);
+
+        if (user == null)
+        {
+            errorMessage = "Error: Invalid login attempt.";
+            return;
+        }
+
+        if (!await UserManager.IsEmailConfirmedAsync(user))
+        {
+            errorMessage = "Error: You must confirm your email before logging in.";
+            Logger.LogWarning("Unconfirmed user login attempt: {Email}", Input.Email);
+            await Task.Delay(3000);
+            RedirectManager.RedirectTo("Account/ResendEmailConfirmation");
+            return;
+        }
+
+        if (!user.IsApproved)
+        {
+            errorMessage = "Error: Your account is pending approval.";
+            Logger.LogWarning("Unapproved user login attempt: {Email}", Input.Email);
+            return;
+        }
+
+        var result = await SignInManager.PasswordSignInAsync(user.UserName, Input.Password, Input.RememberMe, false);
+
+        if (result.Succeeded)
+        {
+            Logger.LogInformation("User {Email} logged in successfully.", Input.Email);
+
+            var roles = await UserManager.GetRolesAsync(user);
+
+            if (roles.Contains("Admin"))
+            {
+                RedirectManager.RedirectTo(ReturnUrl ?? "/admin/dashboard");
+            }
+            else if (roles.Contains("Manager"))
+            {
+                RedirectManager.RedirectTo(ReturnUrl ?? "/manager/dashboard");
+            }
+            else if (roles.Contains("Employee"))
+            {
+                RedirectManager.RedirectTo(ReturnUrl ?? "/employee/dashboard");
+            }
+            else
+            {
+                RedirectManager.RedirectTo(ReturnUrl ?? "/");
+            }
+        }
+        else if (result.RequiresTwoFactor)
+        {
+            RedirectManager.RedirectTo("Account/LoginWith2fa", new()
+                {
+                    ["returnUrl"] = ReturnUrl,
+                    ["rememberMe"] = Input.RememberMe
+                });
+        }
+        else if (result.IsLockedOut)
+        {
+            Logger.LogWarning("User {Email} account locked out.", Input.Email);
+            RedirectManager.RedirectTo("Account/Lockout");
+        }
+        else
+        {
+            errorMessage = "Error: Invalid login attempt.";
+        }
+    }
+
+    private sealed class InputModel
+    {
+        [Required, EmailAddress]
+        public string Email { get; set; } = "";
+
+        [Required, DataType(DataType.Password)]
+        public string Password { get; set; } = "";
+
+        public bool RememberMe { get; set; }
+    }
+}

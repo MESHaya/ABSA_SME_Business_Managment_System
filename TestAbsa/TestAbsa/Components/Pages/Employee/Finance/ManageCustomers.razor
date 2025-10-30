@@ -1,0 +1,290 @@
+﻿@page "/employee/finance/manage-customers"
+@rendermode InteractiveServer
+
+@using TestAbsa.Data.Models
+@using TestAbsa.Services
+@inject IFinanceService FinanceService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>Manage Customers</PageTitle>
+   <NavLink class="btn btn-primary mt-3" href="/employee/finance/dashboard">
+                ← 
+            </NavLink>
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>Customer Management</h2>
+            <p class="text-muted">Add, edit, or remove customers</p>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center p-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Add/Edit Customer Form -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>@(editingCustomer.Id == 0 ? "Add New Customer" : "Edit Customer")</h5>
+            </div>
+            <div class="card-body">
+                <EditForm Model="@editingCustomer" 
+                          OnValidSubmit="SaveCustomer"
+                          OnInvalidSubmit="OnValidationFailed"
+                          FormName="CustomerForm">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-danger" />
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Name</label>
+                        <InputText class="form-control" @bind-Value="editingCustomer.Name" placeholder="Enter customer name" />
+                        <ValidationMessage For="@(() => editingCustomer.Name)" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Email</label>
+                        <InputText type="email" class="form-control" @bind-Value="editingCustomer.Email" placeholder="customer@example.com" />
+                        <ValidationMessage For="@(() => editingCustomer.Email)" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Phone</label>
+                        <InputText type="tel" class="form-control" @bind-Value="editingCustomer.Phone" placeholder="+27123456789" />
+                        <ValidationMessage For="@(() => editingCustomer.Phone)" />
+                        <small class="form-text text-muted">
+                            Format: +countrycode followed by digits, 7-15 characters (e.g., +27123456789)
+                        </small>
+                    </div>
+
+                    <div class="d-flex gap-2 mt-3">
+                        <button type="submit" class="btn btn-primary">
+                            @(editingCustomer.Id == 0 ? "➕ Add Customer" : "💾 Update Customer")
+                        </button>
+                        @if (editingCustomer.Id != 0)
+                        {
+                            <button type="button" class="btn btn-outline-secondary" @onclick="CancelEdit">Cancel</button>
+                        }
+                    </div>
+                </EditForm>
+
+                @if (!string.IsNullOrEmpty(successMessage))
+                {
+                    <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
+                        @successMessage
+                        <button type="button" class="btn-close" @onclick="@(() => successMessage = null)"></button>
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+                        @errorMessage
+                        <button type="button" class="btn-close" @onclick="@(() => errorMessage = null)"></button>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Customer List Table -->
+        <div class="card">
+            <div class="card-header">
+                <h5>All Customers (@customers.Count)</h5>
+            </div>
+            <div class="card-body">
+                @if (customers.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Phone</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th style="width: 200px;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var customer in customers)
+                                {
+                                    <tr>
+                                        <td>@customer.Name</td>
+                                        <td>@customer.Email</td>
+                                        <td>@customer.Phone</td>
+                                        <td>
+                                            @if (customer.IsActive)
+                                            {
+                                                <span class="badge bg-success">Active</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">Inactive</span>
+                                            }
+                                        </td>
+                                        <td>@customer.CreatedDate.ToString("yyyy-MM-dd")</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-info me-1" type="button" @onclick="() => EditCustomer(customer)">
+                                                ✏️ Edit
+                                            </button>
+                                            <button class="btn btn-sm btn-danger" type="button" @onclick="() => DeleteCustomer(customer.Id)">
+                                                🗑️ Delete
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-5 text-muted">
+                        <div style="font-size: 4rem;">👥</div>
+                        <h4>No Customers Yet</h4>
+                        <p>Add your first customer using the form above.</p>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private Customer editingCustomer { get; set; } = new Customer();
+
+    private List<Customer> customers = new();
+    private bool isLoading = true;
+    private string? errorMessage;
+    private string? successMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCustomers();
+    }
+
+    private async Task LoadCustomers()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = null;
+            customers = await FinanceService.GetAllCustomersAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading customers: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void EditCustomer(Customer customer)
+    {
+        editingCustomer = new Customer
+        {
+            Id = customer.Id,
+            Name = customer.Name,
+            Email = customer.Email,
+            Phone = customer.Phone,
+            IsActive = customer.IsActive,
+            CreatedDate = customer.CreatedDate
+        };
+
+        successMessage = null;
+        errorMessage = null;
+    }
+
+    private void CancelEdit()
+    {
+        editingCustomer = new Customer();
+        successMessage = null;
+        errorMessage = null;
+    }
+
+    private async Task SaveCustomer()
+    {
+        if (editingCustomer == null) return;
+
+        try
+        {
+            isLoading = true;
+            errorMessage = null;
+            successMessage = null;
+
+            if (editingCustomer.Id == 0)
+            {
+                // NEW CUSTOMER - Ensure IsActive is set
+                editingCustomer.IsActive = true;
+                editingCustomer.CreatedDate = DateTime.UtcNow;
+                
+                await FinanceService.AddCustomerAsync(editingCustomer);
+                successMessage = "Customer added successfully!";
+            }
+            else
+            {
+                // EDITING EXISTING CUSTOMER
+                await FinanceService.UpdateCustomerAsync(editingCustomer);
+                successMessage = "Customer updated successfully!";
+            }
+
+            CancelEdit();
+            await LoadCustomers();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error saving customer: {ex.Message}";
+            Console.WriteLine($"[ERROR] SaveCustomer failed: {ex}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task DeleteCustomer(int id)
+    {
+        if (!await JsConfirm("Are you sure you want to delete this customer?")) return;
+
+        try
+        {
+            isLoading = true;
+            errorMessage = null;
+            successMessage = null;
+
+            await FinanceService.DeleteCustomerAsync(id);
+            successMessage = "Customer deleted successfully!";
+            await LoadCustomers();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error deleting customer: {ex.Message}";
+            Console.WriteLine($"[ERROR] DeleteCustomer failed: {ex}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task<bool> JsConfirm(string message) => await JS.InvokeAsync<bool>("confirm", message);
+
+    private void OnValidationFailed(EditContext context)
+    {
+        errorMessage = "Please fix the validation errors above.";
+        foreach (var msg in context.GetValidationMessages())
+        {
+            Console.WriteLine($"Validation error: {msg}");
+        }
+    }
+}

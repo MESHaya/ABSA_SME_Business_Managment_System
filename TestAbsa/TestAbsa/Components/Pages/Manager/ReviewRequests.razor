@@ -1,0 +1,171 @@
+﻿@page "/manager/requests/review"
+@rendermode InteractiveServer
+@using System.Security.Claims
+@using TestAbsa.Data.Models
+@using TestAbsa.Services
+@using TestAbsa.Data
+@inject IInventoryService InventoryService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+
+<PageTitle>Review Stock Requests</PageTitle>
+
+<div class="container mt-5">
+    <h3 class="mb-4 text-secondary">Pending Stock Requests for Review</h3>
+
+    @if (IsLoading)
+    {
+        <div class="d-flex justify-content-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (PendingRequests.Count == 0)
+    {
+        <div class="alert alert-info">
+            <p class="mb-0">There are no pending stock requests at this time. Great job, inventory is up-to-date!</p>
+        </div>
+    }
+    else
+    {
+        <p class="text-muted">You have **@PendingRequests.Count** request(s) waiting for approval.</p>
+
+        <div class="row">
+            @foreach (var request in PendingRequests)
+            {
+                <div class="col-lg-6 col-md-12 mb-4">
+                    <div class="card shadow-sm border-secondary h-100">
+                        <div class="card-body">
+                            <h5 class="card-title text-primary">@request.Product?.ItemName</h5>
+                            <h6 class="card-subtitle mb-3 text-muted">Requested by: @request.EmployeeName (@request.EmployeeId)</h6>
+
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <p class="mb-0"><strong>Quantity:</strong> <span class="badge bg-warning text-dark fs-6">@request.Quantity</span></p>
+                                </div>
+                                <div class="col-6">
+                                    <p class="mb-0"><strong>Requested On:</strong> @request.RequestDate.ToLocalTime().ToString("MMM dd, yyyy")</p>
+                                </div>
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(request.Notes))
+                            {
+                                <p class="card-text border-top pt-2"><strong>Notes:</strong> <em>@request.Notes</em></p>
+                            }
+
+                            <div class="mt-3 pt-2 border-top d-flex justify-content-between">
+                                <button class="btn btn-success me-2"
+                                        @onclick=@(() => HandleReview(request.Id, "Approved"))>
+                                    <i class="oi oi-check"></i> Approve
+                                </button>
+                                <button class="btn btn-danger"
+                                        @onclick=@(() => HandleReview(request.Id, "Rejected"))>
+                                    <i class="oi oi-x"></i> Reject
+                                </button>
+                            </div>
+
+
+                            @if (request.Id == LastReviewedId && !string.IsNullOrEmpty(ReviewMessage))
+                            {
+                                <div class="mt-3 alert alert-success p-2">@ReviewMessage</div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<StockRequest> PendingRequests = new List<StockRequest>();
+    private bool IsLoading = true;
+    private string? CurrentUserId;
+    private string? CurrentUserName;
+    private int? CurrentOrganizationId; // Add organization filter
+
+    // Feedback
+    private string ReviewMessage = string.Empty;
+    private int LastReviewedId = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // 1. Get current user's details for logging the review
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        CurrentUserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        CurrentUserName = user.FindFirst(ClaimTypes.Name)?.Value ?? "Manager"; // Fallback name
+
+        // Assume OrganizationId is stored as a claim
+        var orgClaim = user.FindFirst("OrganizationId")?.Value;
+        if (int.TryParse(orgClaim, out int orgId))
+        {
+            CurrentOrganizationId = orgId;
+        }
+
+        // 2. Load pending requests
+        await LoadPendingRequests();
+        IsLoading = false;
+    }
+
+    private async Task LoadPendingRequests()
+    {
+        // Check if manager details are available before loading
+        if (CurrentUserId != null && CurrentOrganizationId.HasValue)
+        {
+            // Load all pending requests and filter by organization
+            var allRequests = await InventoryService.GetPendingStockRequestsAsync();
+            PendingRequests = allRequests
+                .Where(r => r.OrganizationId == CurrentOrganizationId.Value)
+                .OrderByDescending(r => r.RequestDate)
+                .ToList();
+        }
+        else
+        {
+            // If the user ID or organization isn't available, redirect or show an error
+            PendingRequests = new List<StockRequest>();
+            ReviewMessage = "Error: Could not retrieve your user identity or organization. Please ensure you are logged in.";
+        }
+    }
+
+    private async Task HandleReview(int requestId, string status)
+    {
+        if (string.IsNullOrEmpty(CurrentUserId))
+        {
+            ReviewMessage = "Review failed: User identity is missing.";
+            return;
+        }
+
+        LastReviewedId = requestId;
+        ReviewMessage = $"Processing request {requestId}...";
+        StateHasChanged();
+
+        try
+        {
+            bool success = await InventoryService.ReviewStockRequestAsync(
+                requestId,
+                status,
+                CurrentUserId,
+                CurrentUserName
+            );
+
+            if (success)
+            {
+                ReviewMessage = $"Request {requestId} successfully marked as {status}.";
+                // Reload data to remove the reviewed request from the list
+                await LoadPendingRequests();
+            }
+            else
+            {
+                ReviewMessage = $"Failed to review request {requestId}. It may no longer exist.";
+            }
+        }
+        catch (Exception ex)
+        {
+            ReviewMessage = $"An error occurred during review: {ex.Message}";
+        }
+    }
+}
+

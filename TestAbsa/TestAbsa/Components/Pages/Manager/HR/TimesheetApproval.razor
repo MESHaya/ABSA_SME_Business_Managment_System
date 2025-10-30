@@ -1,0 +1,286 @@
+﻿@page "/manager/hr/timesheet-approvals"
+@layout TestAbsa.Components.Layout.MainLayout
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using TestAbsa.Data
+@using TestAbsa.Data.Models
+@inject IDbContextFactory<ApplicationDbContext> DbContextFactory
+@inject ILogger<TimesheetApproval> Logger
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthenticationStateProvider
+@inject Microsoft.AspNetCore.Identity.UserManager<ApplicationUser> UserManager
+
+<h3 class="mb-4"><i class="bi bi-clipboard-check"></i> Timesheet Approval</h3>
+<NavLink class="btn btn primary mt-3" href="/manager/hr/dashboard">
+                ← 
+            </NavLink>
+
+@if (isLoading)
+{
+    <div class="text-center text-muted py-3">
+        <span class="spinner-border spinner-border-sm me-2"></span> Loading timesheets...
+    </div>
+}
+else
+{
+    <div class="btn-group mb-3">
+        <button class="btn btn-outline-secondary @(filter == "Pending" ? "active" : "")" @onclick="@(() => ChangeFilter("Pending"))">Pending</button>
+        <button class="btn btn-outline-success @(filter == "Approved" ? "active" : "")" @onclick="@(() => ChangeFilter("Approved"))">Approved</button>
+        <button class="btn btn-outline-danger @(filter == "Rejected" ? "active" : "")" @onclick="@(() => ChangeFilter("Rejected"))">Rejected</button>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Employee</th>
+                    <th>Date</th>
+                    <th>Project</th>
+                    <th>Type</th>
+                    <th>Hours</th>
+                    <th>Description</th>
+                    <th>Status</th>
+                    <th>Manager Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (timesheets.Any())
+                {
+                    @foreach (var entry in timesheets)
+                    {
+                        <tr>
+                            <td>@entry.Employee?.FullName ?? "Unknown"</td>
+                            <td>@entry.WorkDate.ToString("yyyy-MM-dd")</td>
+                            <td>@entry.ProjectName</td>
+                            <td>@entry.TaskType</td>
+                            <td>@entry.HoursWorked</td>
+                            <td>@entry.Description</td>
+                            <td>
+                                @if (entry.IsApproved)
+                                {
+                                    <span class="badge bg-success">Approved</span>
+                                }
+                                else if (entry.IsRejected)
+                                {
+                                    <span class="badge bg-danger">Rejected</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning">Pending</span>
+                                }
+                            </td>
+                            <td>
+                                @if (!entry.IsApproved && !entry.IsRejected)
+                                {
+                                    <button class="btn btn-success btn-sm me-2" @onclick="() => ApproveTimesheet(entry.Id)">
+                                        <i class="bi bi-check-circle"></i> Approve
+                                    </button>
+                                    <button class="btn btn-danger btn-sm" @onclick="() => OpenRejectModal(entry.Id)">
+                                        <i class="bi bi-x-circle"></i> Reject
+                                    </button>
+                                }
+                                else
+                                {
+                                    <small class="text-muted">
+                                        @if (entry.IsApproved)
+                                        {
+                                            <text>Approved @entry.ApprovedDate?.ToLocalTime().ToString("g")</text>
+                                        }
+                                        else
+                                        {
+                                            <text>Rejected @entry.RejectedDate?.ToLocalTime().ToString("g")</text>
+                                        }
+                                    </small>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-3">No @filter timesheets found.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+<!-- Reject Modal -->
+@if (showRejectModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="bi bi-x-circle"></i> Reject Timesheet</h5>
+                    <button type="button" class="btn-close" @onclick="CloseRejectModal"></button>
+                </div>
+                <div class="modal-body">
+                    <label>Rejection Reason:</label>
+                    <textarea class="form-control" @bind="rejectionReason" rows="3" placeholder="Enter reason for rejection..."></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseRejectModal">Cancel</button>
+                    <button class="btn btn-danger" @onclick="ConfirmReject">
+                        <i class="bi bi-x-circle"></i> Reject
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<TimesheetEntry> timesheets = new();
+    private bool isLoading = false;
+    private string filter = "Pending";
+    private string? currentManagerId;
+    private bool showRejectModal = false;
+    private int rejectTargetId;
+    private string rejectionReason = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // ✅ FIX: Load manager first, THEN load timesheets
+        await LoadCurrentManager();
+        
+        // Only load timesheets after we have the manager ID
+        if (!string.IsNullOrEmpty(currentManagerId))
+        {
+            await LoadTimesheets();
+        }
+    }
+
+    private async Task LoadCurrentManager()
+    {
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = await UserManager.GetUserAsync(authState.User);
+            currentManagerId = user?.Id;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading current manager");
+            Console.WriteLine($"Error loading manager: {ex.Message}");
+        }
+    }
+
+    private async Task LoadTimesheets()
+    {
+        if (string.IsNullOrEmpty(currentManagerId)) return;
+
+        isLoading = true;
+
+        try
+        {
+            // ✅ Create a fresh context for this operation
+            using var context = await DbContextFactory.CreateDbContextAsync();
+            
+            var query = context.TimesheetEntries
+                .Include(t => t.Employee)
+                .AsQueryable();
+
+            query = filter switch
+            {
+                "Approved" => query.Where(t => t.IsApproved),
+                "Rejected" => query.Where(t => t.IsRejected),
+                _ => query.Where(t => !t.IsApproved && !t.IsRejected)
+            };
+
+            timesheets = await query
+                .OrderByDescending(t => t.WorkDate)
+                .ThenByDescending(t => t.CreatedDate)
+                .Take(50)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading timesheets");
+            Console.WriteLine($"Error loading timesheets: {ex.Message}");
+            timesheets = new List<TimesheetEntry>();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ApproveTimesheet(int id)
+    {
+        try
+        {
+            // ✅ Fresh context for approval operation
+            using var context = await DbContextFactory.CreateDbContextAsync();
+            
+            var entry = await context.TimesheetEntries.FirstOrDefaultAsync(t => t.Id == id);
+            if (entry == null) return;
+
+            entry.IsApproved = true;
+            entry.IsRejected = false;
+            entry.ApprovedByManagerId = currentManagerId;
+            entry.ApprovedDate = DateTime.UtcNow;
+
+            await context.SaveChangesAsync();
+            
+            // Reload timesheets after approval
+            await LoadTimesheets();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error approving timesheet");
+            Console.WriteLine($"Error approving timesheet: {ex.Message}");
+        }
+    }
+
+    private void OpenRejectModal(int id)
+    {
+        rejectTargetId = id;
+        rejectionReason = string.Empty;
+        showRejectModal = true;
+    }
+
+    private void CloseRejectModal()
+    {
+        showRejectModal = false;
+    }
+
+    private async Task ConfirmReject()
+    {
+        if (rejectTargetId == 0) return;
+
+        try
+        {
+            // ✅ Fresh context for rejection operation
+            using var context = await DbContextFactory.CreateDbContextAsync();
+            
+            var entry = await context.TimesheetEntries.FirstOrDefaultAsync(t => t.Id == rejectTargetId);
+            if (entry == null) return;
+
+            entry.IsRejected = true;
+            entry.IsApproved = false;
+            entry.RejectionReason = rejectionReason;
+            entry.RejectedByManagerId = currentManagerId;
+            entry.RejectedDate = DateTime.UtcNow;
+
+            await context.SaveChangesAsync();
+            
+            showRejectModal = false;
+            
+            // Reload timesheets after rejection
+            await LoadTimesheets();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error rejecting timesheet");
+            Console.WriteLine($"Error rejecting timesheet: {ex.Message}");
+        }
+    }
+
+    private async Task ChangeFilter(string newFilter)
+    {
+        filter = newFilter;
+        await LoadTimesheets();
+    }
+}

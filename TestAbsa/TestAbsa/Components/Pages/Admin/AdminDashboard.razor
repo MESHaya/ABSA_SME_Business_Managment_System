@@ -1,0 +1,269 @@
+﻿@page "/admin/dashboard"
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using System.ComponentModel.DataAnnotations
+@using TestAbsa.Data
+@using TestAbsa.Data.Models
+@inject IDbContextFactory<ApplicationDbContext> ContextFactory
+@inject UserManager<ApplicationUser> _userManager
+@inject Microsoft.AspNetCore.Components.NavigationManager NavigationManager
+@inject SignInManager<ApplicationUser> SignInManager 
+@using Microsoft.AspNetCore.Authorization
+
+@attribute [Authorize(Roles = "Admin")]
+
+@rendermode InteractiveServer
+
+<h3>Admin Dashboard</h3>
+<div class="d-flex justify-content-between align-items-center">
+    <h3>Welcome, Admin</h3>
+    <button class="btn btn-danger" @onclick="Logout">
+        <i class="bi bi-box-arrow-right"></i> Logout
+    </button>
+</div>
+<p>This is the Admin Dashboard. Only users with the <strong>Admin</strong> role can access this page.</p>
+
+<div class="container mt-4">
+    <h4>Registered Organizations</h4>
+
+    @if (organizations == null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else if (!organizations.Any())
+    {
+        <p>No organizations found.</p>
+    }
+    else
+    {
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Employees</th>
+                    <th>Registration Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var org in organizations)
+                {
+                    <tr>
+                        <td>@org.Name</td>
+                        <td>@org.Employees?.Count()</td>
+                        <td>@org.RegistrationDate.ToShortDateString()</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    <hr />
+
+    <h4>Add New Organization</h4>
+    @if (!string.IsNullOrEmpty(creationMessage))
+    {
+        <div class="alert alert-info">@creationMessage</div>
+    }
+
+    <EditForm Model="@Input" OnValidSubmit="@CreateCompany" FormName="createOrganizationForm" Method="post">
+
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label>Company Name</label>
+            <InputText class="form-control" @bind-Value="Input.CompanyName" />
+        </div>
+
+        <div class="mb-3">
+            <label>Manager First Name</label>
+            <InputText class="form-control" @bind-Value="Input.FirstName" />
+        </div>
+
+        <div class="mb-3">
+            <label>Manager Last Name</label>
+            <InputText class="form-control" @bind-Value="Input.LastName" />
+        </div>
+
+        <div class="mb-3">
+            <label>Manager Email</label>
+            <InputText class="form-control" @bind-Value="Input.ManagerEmail" />
+        </div>
+
+        <div class="mb-3">
+            <label>Manager Password</label>
+            <InputText class="form-control" type="password" @bind-Value="Input.ManagerPassword" />
+        </div>
+
+        <button class="btn btn-primary" type="submit">Create Organization</button>
+        <button type="button" class="btn btn-secondary" @onclick="CheckValues">Check Value</button>
+    </EditForm>
+
+
+</div>
+
+@code {
+
+    private List<Organization> organizations = new();
+    private string? creationMessage;
+
+    // 1. Rename the model property to 'Input' (or similar, following Blazor convention)
+    // 2. Add [SupplyParameterFromForm] so the framework knows to bind the POST data here.
+    [SupplyParameterFromForm]
+    private NewOrgModel Input { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOrganizationsAsync();
+    }
+
+    private async Task LoadOrganizationsAsync()
+    {
+        using var context = await ContextFactory.CreateDbContextAsync();
+
+        organizations = await context.Organizations
+            .Include(o => o.Employees)
+            .OrderBy(o => o.Name)
+            .AsNoTracking()
+            .ToListAsync();
+    }
+
+    // LOGOUT METHOD ADDED HERE
+    private async Task Logout()
+    {
+        try
+        {
+            // 1. Sign the user out
+            await SignInManager.SignOutAsync();
+
+            // 2. Clear any additional state if needed (optional)
+            // e.g., clear local storage or cached variables
+
+            // 3. Redirect to the login page
+            // forceLoad:true ensures the full page reload and resets authentication state
+            NavigationManager.NavigateTo("/", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Logout failed: {ex.Message}");
+
+            // Optionally display a message to the user
+
+            Console.WriteLine("Re-routing to Login Page");
+            NavigationManager.NavigateTo("/", forceLoad: true);
+        }
+    }
+
+
+    private void CheckValues()
+    {
+        // Now references the Input property
+        creationMessage = $"Company: {Input.CompanyName}, Manager: {Input.FirstName} {Input.LastName}, Email: {Input.ManagerEmail}";
+    }
+
+    private string GenerateUniqueRandomCode()
+    {
+        return new Random().Next(10000, 99999).ToString("D5");
+    }
+
+    private async Task CreateCompany()
+    {
+        // The check against 'Input' is now correct as it holds the submitted data.
+        if (!ValidateForm()) return;
+
+        using var context = await ContextFactory.CreateDbContextAsync();
+
+        // 1️⃣ Create Organization
+        var org = new Organization
+            {
+                Name = Input.CompanyName,
+                RegistrationDate = DateTime.UtcNow
+            };
+
+        context.Organizations.Add(org);
+        await context.SaveChangesAsync();
+
+        // 2️⃣ Generate unique username
+        string rolePrefix = "M";
+        string baseUsername = (rolePrefix + Input.FirstName).Replace(" ", "").ToLowerInvariant();
+        string generatedUsername = await GenerateUniqueUsernameAsync(baseUsername);
+
+        if (string.IsNullOrEmpty(generatedUsername))
+        {
+            creationMessage = "❌ Failed to generate a unique username. Please try again.";
+            StateHasChanged();
+            return;
+        }
+
+        // 3️⃣ Create Manager User
+        var manager = new ApplicationUser
+            {
+                UserName = generatedUsername,
+                Email = Input.ManagerEmail,
+                EmailConfirmed = true,
+                OrganizationId = org.Id,
+                UserRole = "Manager",
+                FirstName = Input.FirstName.Trim(),
+                LastName = Input.LastName.Trim(),
+                FullName = $"{Input.FirstName.Trim()} {Input.LastName.Trim()}",
+                IsApproved = true,
+                IsActive = true,
+                RegistrationDate = DateTime.UtcNow
+            };
+
+        var result = await _userManager.CreateAsync(manager, Input.ManagerPassword);
+
+        if (result.Succeeded)
+        {
+            await _userManager.AddToRoleAsync(manager, "Manager");
+            await LoadOrganizationsAsync(); // Refresh view
+            Input = new(); // Reset form by creating a new instance
+            creationMessage = "✅ Organization and Manager successfully created!";
+        }
+        else
+        {
+            creationMessage = "❌ Failed to create Manager: " +
+                string.Join(", ", result.Errors.Select(e => e.Description));
+        }
+
+        await Task.Delay(4000);
+        creationMessage = null;
+        StateHasChanged(); // refresh UI
+
+    }
+
+    // Updated to use the Input property
+    private bool ValidateForm()
+    {
+        return !(string.IsNullOrWhiteSpace(Input.CompanyName) ||
+                 string.IsNullOrWhiteSpace(Input.FirstName) ||
+                 string.IsNullOrWhiteSpace(Input.LastName) ||
+                 string.IsNullOrWhiteSpace(Input.ManagerEmail) ||
+                 string.IsNullOrWhiteSpace(Input.ManagerPassword));
+    }
+
+    private async Task<string> GenerateUniqueUsernameAsync(string baseUsername)
+    {
+        int maxAttempts = 10;
+        for (int i = 0; i < maxAttempts; i++)
+        {
+            string randomCode = new Random().Next(10000, 99999).ToString("D5");
+            string generatedUsername = baseUsername + randomCode;
+
+            if (await _userManager.FindByNameAsync(generatedUsername) == null)
+                return generatedUsername;
+        }
+
+        return string.Empty; // Failed to generate
+    }
+
+
+    public class NewOrgModel
+    {
+        [Required] public string CompanyName { get; set; } = string.Empty;
+        [Required, StringLength(50)] public string FirstName { get; set; } = string.Empty;
+        [Required, StringLength(50)] public string LastName { get; set; } = string.Empty;
+        [Required, EmailAddress] public string ManagerEmail { get; set; } = string.Empty;
+        [Required, MinLength(6)] public string ManagerPassword { get; set; } = string.Empty;
+    }
+}

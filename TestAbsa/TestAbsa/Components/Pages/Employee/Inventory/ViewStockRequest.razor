@@ -1,0 +1,114 @@
+﻿@page "/employee/stock-requests"
+@inject IInventoryService InventoryService
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthenticationStateProvider
+
+
+@using TestAbsa.Data.Models
+
+<PageTitle>View Stock Requests</PageTitle>
+
+<NavLink class="btn btn-primary mt-3" href="/employee/inventory/dashboard">
+                ← 
+            </NavLink>
+
+<div class="container mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="text-primary fw-bold">Submitted Stock Requests</h3>
+        <a href="/employee/inventory/request-stock" class="btn btn-outline-primary">
+            <i class="oi oi-plus"></i> New Request
+        </a>
+    </div>
+
+    @if (IsLoading)
+    {
+        <div class="text-center p-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading stock requests...</p>
+        </div>
+    }
+    else if (StockRequests == null || !StockRequests.Any())
+    {
+        <div class="alert alert-info text-center">
+            <h5 class="alert-heading mb-1">No Stock Requests Found</h5>
+            <p class="mb-0">You haven't submitted any stock requests yet.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive shadow-sm rounded">
+            <table class="table table-hover table-bordered mb-0 align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Product</th>
+                        <th>Quantity</th>
+                        <th>Employee</th>
+                        <th>Notes</th>
+                        <th>Status</th>
+                        <th>Date Requested</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var request in StockRequests)
+                    {
+                        var statusBadge = request.Status switch
+                        {
+                            "Approved" => "badge bg-success",
+                            "Denied" => "badge bg-danger",
+                            "Pending" => "badge bg-warning text-dark",
+                            _ => "badge bg-secondary"
+                        };
+
+                        <tr>
+                            <td>@request.Product?.ItemName</td>
+                            <td class="text-center">@request.Quantity</td>
+                            <td>@request.EmployeeName</td>
+                            <td>@request.Notes</td>
+                            <td class="text-center">
+                                <span class="@statusBadge">@request.Status</span>
+                            </td>
+                            <td>@request.RequestDate.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <p class="text-muted mt-3">Total requests: @StockRequests.Count</p>
+    }
+</div>
+
+@code {
+    private List<StockRequest> StockRequests = new();
+    private bool IsLoading = true;
+
+ protected override async Task OnInitializedAsync()
+{
+    try
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity is not null && user.Identity.IsAuthenticated)
+        {
+            var employeeId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+            if (!string.IsNullOrEmpty(employeeId))
+            {
+                StockRequests = await InventoryService.GetStockRequestsByEmployeeAsync(employeeId);
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error loading stock requests: {ex.Message}");
+        StockRequests = new List<StockRequest>();
+    }
+    finally
+    {
+        IsLoading = false;
+    }
+}
+
+}
