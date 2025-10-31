@@ -71,15 +71,7 @@ jobs:
     # ============================================================
     # JOB OUTPUT: Publish Application
     # ============================================================
-    - name: 7. Publish Application
-      run: dotnet publish ${{ env.PROJECT_NAME }} --configuration ${{ env.BUILD_CONFIGURATION }} --output ${{ github.workspace }}/publish
-
-    - name: 8. Upload Build Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: testabsa-release
-        path: ${{ github.workspace }}/publish
-        if-no-files-found: error
+   
 
   # ============================================================
   # JOB 2: STATIC CODE ANALYSIS
