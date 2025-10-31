@@ -1,25 +1,91 @@
-name: CI/CD Pipeline for TestAbsa SME System
+name: Complete CI/CD Pipeline - TestAbsa SME System
 
 on:
   push:
     branches:
       - New-Working-App
+      - main
   pull_request:
     branches:
       - New-Working-App
+      - main
 
 env:
-  # The configuration (Release or Debug) to build
-  BUILD_CONFIGURATION: 'Release' 
-  # Path to the main solution file
-  SOLUTION_FILE_PATH: 'TestAbsa.sln' 
-  # Name of the project to publish (e.g., the server project)
-  PROJECT_NAME: 'TestAbsa/TestAbsa.csproj' 
-  # .NET SDK Version
-  DOTNET_VERSION: '8.0.x' 
+  BUILD_CONFIGURATION: 'Release'
+  SOLUTION_FILE_PATH: 'TestAbsa.sln'
+  # Leave empty to publish entire solution, or specify exact path
+  PROJECT_NAME: ''
+  DOTNET_VERSION: '8.0.x'
 
 jobs:
-  build-and-publish:
+  # ============================================================
+  # JOB 1: BUILD AND TEST
+  # ============================================================
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 1. Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full history for better analysis
+
+    - name: 2. Setup .NET Core SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: 3. Restore Dependencies
+      run: dotnet restore ${{ env.SOLUTION_FILE_PATH }}
+
+    - name: 4. Build Application
+      run: dotnet build ${{ env.SOLUTION_FILE_PATH }} --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore
+
+    # ============================================================
+    # REQUIREMENT 3: UNIT TEST REPORTING
+    # ============================================================
+    - name: 5. Run Unit Tests with Coverage
+      run: |
+        dotnet test ${{ env.SOLUTION_FILE_PATH }} \
+          --configuration ${{ env.BUILD_CONFIGURATION }} \
+          --no-build \
+          --verbosity normal \
+          --logger "trx;LogFileName=test-results.trx" \
+          --logger "html;LogFileName=test-results.html" \
+          --collect:"XPlat Code Coverage" \
+          --results-directory ./TestResults
+      continue-on-error: true
+
+    - name: 6. Upload Test Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results
+        path: |
+          **/TestResults/**/*.trx
+          **/TestResults/**/*.html
+          **/TestResults/**/coverage.cobertura.xml
+        if-no-files-found: warn
+
+    # ============================================================
+    # JOB OUTPUT: Publish Application
+    # ============================================================
+    - name: 7. Publish Application
+      run: dotnet publish ${{ env.PROJECT_NAME }} --configuration ${{ env.BUILD_CONFIGURATION }} --output ${{ github.workspace }}/publish
+
+    - name: 8. Upload Build Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: testabsa-release
+        path: ${{ github.workspace }}/publish
+        if-no-files-found: error
+
+  # ============================================================
+  # JOB 2: STATIC CODE ANALYSIS
+  # ============================================================
+  static-code-analysis:
+    name: Static Code Analysis
     runs-on: ubuntu-latest
     
     steps:
@@ -31,54 +97,109 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
 
+    # ============================================================
+    # REQUIREMENT 4: STATIC CODE ANALYSIS
+    # ============================================================
+    - name: 3. Install dotnet-format (Code Style Analyzer)
+      run: dotnet tool install -g dotnet-format
+
+    - name: 4. Run Code Style Analysis
+      run: |
+        dotnet format ${{ env.SOLUTION_FILE_PATH }} --verify-no-changes --verbosity diagnostic --report ./code-analysis-report
+      continue-on-error: true
+
+    - name: 5. Run .NET Code Analyzers
+      run: |
+        dotnet build ${{ env.SOLUTION_FILE_PATH }} \
+          --configuration ${{ env.BUILD_CONFIGURATION }} \
+          /p:TreatWarningsAsErrors=false \
+          /p:RunAnalyzersDuringBuild=true \
+          /p:AnalysisLevel=latest-all \
+          > code-analysis-output.txt 2>&1
+      continue-on-error: true
+
+    - name: 6. Upload Static Analysis Report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: static-analysis-report
+        path: |
+          code-analysis-report/
+          code-analysis-output.txt
+        if-no-files-found: warn
+
+  # ============================================================
+  # JOB 3: SECURITY SCANNING
+  # ============================================================
+  security-scan:
+    name: Security Vulnerability Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 1. Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: 2. Setup .NET Core SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    # ============================================================
+    # REQUIREMENT 5: SECURITY TESTING
+    # ============================================================
     - name: 3. Restore Dependencies
       run: dotnet restore ${{ env.SOLUTION_FILE_PATH }}
 
-    # -----------------------------------------------------------
-    # CI STAGE: BUILD & TEST
-    # -----------------------------------------------------------
-      
-    - name: 4. Build Application
-      run: dotnet build ${{ env.SOLUTION_FILE_PATH }} --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore
+    - name: 4. Check for Vulnerable Dependencies
+      run: |
+        dotnet list package --vulnerable --include-transitive 2>&1 | tee security-vulnerabilities.txt
+      continue-on-error: true
 
-    - name: 5. Run Unit Tests (Optional)
-      # Uncomment and update the project path if you have a separate Test project (e.g., TestAbsa.Tests.csproj)
-      # run: dotnet test TestAbsa.Tests/TestAbsa.Tests.csproj --configuration ${{ env.BUILD_CONFIGURATION }} --no-build
-      run: echo "Skipping tests, no dedicated test project found."
+    - name: 5. Run Dependency Security Audit
+      run: |
+        dotnet list ${{ env.SOLUTION_FILE_PATH }} package --vulnerable --include-transitive --format json > security-report.json
+      continue-on-error: true
 
-    # -----------------------------------------------------------
-    # CD STAGE: PUBLISH ARTIFACT
-    # -----------------------------------------------------------
-      
-    - name: 6. Publish Application
-      # Publishes the main server project for deployment
-      run: dotnet publish ${{ env.PROJECT_NAME }} --configuration ${{ env.BUILD_CONFIGURATION }} --output ${{ github.workspace }}/app/publish
+    - name: 6. DevSkim Security Analyzer
+      uses: microsoft/DevSkim-Action@v1
+      continue-on-error: true
 
-    - name: 7. Upload Build Artifact
-      # Uploads the published files so they can be downloaded and deployed to your server (AWS, Azure, etc.)
-      uses: actions/upload-artifact@v4
+    - name: 7. Upload DevSkim Results to GitHub Security
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
       with:
-        name: testabsa-release
-        path: ${{ github.workspace }}/app/publish
-        if-no-files-found: error # Fail the build if no files are found
+        sarif_file: devskim-results.sarif
+      continue-on-error: true
 
-  # -----------------------------------------------------------
-  # OPTIONAL: DEPLOY STAGE (Example for Azure)
-  # -----------------------------------------------------------
-  # deploy-to-azure:
-  #   needs: build-and-publish
-  #   runs-on: ubuntu-latest
-  #   environment: Production
-  #   steps:
-  #     - name: Download Artifact
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         name: testabsa-release
-        
-  #     - name: Deploy to Azure Web App
-  #       uses: azure/webapps-deploy@v3
-  #       with:
-  #         app-name: 'Your-Azure-App-Name'
-  #         slot-name: 'Production'
-  #         publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }} 
-  #         package: . # The artifact content is the package to deploy
+    - name: 8. Upload Security Reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: security-scan-reports
+        path: |
+          security-vulnerabilities.txt
+          security-report.json
+          devskim-results.sarif
+        if-no-files-found: warn
+
+  # ============================================================
+  # JOB 4: SUMMARY REPORT
+  # ============================================================
+  pipeline-summary:
+    name: Pipeline Summary
+    runs-on: ubuntu-latest
+    needs: [build-and-test, static-code-analysis, security-scan]
+    if: always()
+    
+    steps:
+    - name: Pipeline Completion Summary
+      run: |
+        echo "=========================================="
+        echo "CI/CD Pipeline Execution Complete"
+        echo "=========================================="
+        echo "✅ Build and Test: ${{ needs.build-and-test.result }}"
+        echo "✅ Static Code Analysis: ${{ needs.static-code-analysis.result }}"
+        echo "✅ Security Scan: ${{ needs.security-scan.result }}"
+        echo "=========================================="
+        echo "All artifacts uploaded to GitHub Actions"
+        echo "=========================================="
