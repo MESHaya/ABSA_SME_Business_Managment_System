@@ -13,7 +13,8 @@ on:
 env:
   BUILD_CONFIGURATION: 'Release'
   SOLUTION_FILE_PATH: 'TestAbsa.sln'
-  PROJECT_NAME: 'TestAbsa/TestAbsa.csproj'
+  # Leave empty to publish entire solution, or specify exact path
+  PROJECT_NAME: ''
   DOTNET_VERSION: '8.0.x'
 
 jobs:
