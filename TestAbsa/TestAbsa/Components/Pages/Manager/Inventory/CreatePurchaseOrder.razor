@@ -17,139 +17,165 @@
             <div class="card shadow">
                 <div class="card-header bg-primary text-white">
                     <h3 class="mb-0">📦 Create Purchase Order</h3>
+
                 </div>
                 <div class="card-body">
                     @if (!string.IsNullOrEmpty(errorMessage))
                     {
                         <div class="alert alert-danger alert-dismissible fade show" role="alert">
+
                             <strong>Error!</strong> @errorMessage
                             <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
                         </div>
+
                     }
 
                     @if (!string.IsNullOrEmpty(successMessage))
                     {
                         <div class="alert alert-success alert-dismissible fade show" role="alert">
+
                             <strong>Success!</strong> @successMessage
                             <button type="button" class="btn-close" @onclick="() => successMessage = string.Empty"></button>
                         </div>
                     }
 
+
                     <EditForm Model="@newPurchaseOrder" OnValidSubmit="HandleSubmit" OnInvalidSubmit="HandleInvalidSubmit">
                         <DataAnnotationsValidator />
-                        
-                        <!-- Debug info -->
+
                         <div class="alert alert-info mb-3">
                             <small>
-                                <strong>Debug Info:</strong><br/>
-                                SupplierId: @newPurchaseOrder.SupplierId<br/>
-                                ProductId: @newPurchaseOrder.ProductId<br/>
-                                OrderedQuantity: @newPurchaseOrder.OrderedQuantity<br/>
+                                <strong>Debug Info:</strong><br />
+
+                                SupplierId: @newPurchaseOrder.SupplierId<br />
+                                ProductId: @newPurchaseOrder.ProductId<br />
+                                OrderedQuantity: @newPurchaseOrder.OrderedQuantity<br />
+
                                 UnitCost: @newPurchaseOrder.UnitCost
                             </small>
                         </div>
-                        
-                        <!-- Supplier Selection -->
+
+
                         <div class="mb-3">
                             <label for="supplier" class="form-label">Supplier <span class="text-danger">*</span></label>
-                            <InputSelect id="supplier" class="form-select" @bind-Value="newPurchaseOrder.SupplierId" @bind-Value:after="StateHasChanged">
+                            <InputSelect id="supplier" class="form-select" @bind-Value="newPurchaseOrder.SupplierId" @bind-Value:after="OnSupplierChanged">
+
                                 <option value="0">-- Select Supplier --</option>
-                                @foreach (var supplier in suppliers)
+                                @foreach (var supplier in allSuppliers)
                                 {
+
                                     <option value="@supplier.Id">
                                         @supplier.Name (@supplier.ContactPerson)
+
                                     </option>
                                 }
                             </InputSelect>
+
                             <ValidationMessage For="@(() => newPurchaseOrder.SupplierId)" />
                         </div>
 
-                        <!-- Product Selection -->
                         <div class="mb-3">
+
                             <label for="product" class="form-label">Product <span class="text-danger">*</span></label>
                             <InputSelect id="product" class="form-select" @bind-Value="newPurchaseOrder.ProductId" @bind-Value:after="OnProductChanged">
                                 <option value="0">-- Select Product --</option>
-                                @foreach (var product in products)
+
+                                @foreach (var product in displayedProducts)
                                 {
                                     <option value="@product.Id">
+
                                         @product.ItemName (SKU: @product.SKU) - Current Stock: @product.CurrentStock
                                     </option>
                                 }
+
                             </InputSelect>
                             <ValidationMessage For="@(() => newPurchaseOrder.ProductId)" />
-                            
+
+
                             @if (selectedProduct != null)
                             {
                                 <div class="alert alert-info mt-2">
+
                                     <small>
-                                        <strong>Product Info:</strong><br/>
-                                        Current Stock: @selectedProduct.CurrentStock | Min Level: @selectedProduct.MinLevel<br/>
+                                        <strong>Product Info:</strong><br />
+                                        Current Stock:
+                                        @selectedProduct.CurrentStock | Min Level: @selectedProduct.MinLevel<br />
                                         Selling Price: R @selectedProduct.Price.ToString("N2")
                                     </small>
+
                                 </div>
                             }
                         </div>
 
-                        <!-- Quantity -->
                         <div class="mb-3">
                             <label for="quantity" class="form-label">Quantity to Order <span class="text-danger">*</span></label>
                             <InputNumber id="quantity" class="form-control" @bind-Value="newPurchaseOrder.OrderedQuantity" @bind-Value:after="CalculateTotalCost" />
+
                             <ValidationMessage For="@(() => newPurchaseOrder.OrderedQuantity)" />
                         </div>
 
-                        <!-- Unit Cost -->
                         <div class="mb-3">
+
                             <label for="unitCost" class="form-label">Unit Cost (R) <span class="text-danger">*</span></label>
                             <InputNumber id="unitCost" class="form-control" @bind-Value="newPurchaseOrder.UnitCost" @bind-Value:after="CalculateTotalCost" />
                             <ValidationMessage For="@(() => newPurchaseOrder.UnitCost)" />
+
                             @if (selectedProduct != null && newPurchaseOrder.UnitCost > 0)
                             {
                                 <small class="text-muted">
-                                    Selling price: R @selectedProduct.Price.ToString("N2") | 
+
+                                    Selling price: R @selectedProduct.Price.ToString("N2") |
                                     Margin: @(((selectedProduct.Price - newPurchaseOrder.UnitCost) / selectedProduct.Price * 100).ToString("N1"))%
                                 </small>
                             }
                         </div>
 
-                        <!-- Total Cost (Read-only) -->
+
                         <div class="mb-3">
                             <label class="form-label">Total Cost</label>
+
                             <div class="input-group">
                                 <span class="input-group-text">R</span>
                                 <input type="text" class="form-control" value="@totalCost.ToString("N2")" readonly />
+
                             </div>
                         </div>
 
-                        <!-- Expected Delivery Date -->
                         <div class="mb-3">
+
                             <label for="deliveryDate" class="form-label">Expected Delivery Date</label>
                             <InputDate id="deliveryDate" class="form-control" @bind-Value="newPurchaseOrder.ExpectedDeliveryDate" />
                         </div>
 
-                        <!-- Notes -->
                         <div class="mb-3">
                             <label for="notes" class="form-label">Notes</label>
                             <InputTextArea id="notes" class="form-control" rows="3" @bind-Value="newPurchaseOrder.Notes" placeholder="Any special instructions or notes..." />
+
                         </div>
 
-                        <!-- Action Buttons -->
                         <div class="d-flex justify-content-between">
                             <button type="button" class="btn btn-secondary" @onclick="Cancel">
+
                                 <i class="oi oi-arrow-left"></i> Cancel
                             </button>
                             <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+
                                 @if (isSubmitting)
                                 {
                                     <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+
                                     <span>Creating...</span>
                                 }
                                 else
+
                                 {
                                     <i class="oi oi-check"></i>
+
                                     <span>Create Purchase Order</span>
                                 }
                             </button>
                         </div>
+
                     </EditForm>
                 </div>
             </div>
@@ -158,29 +184,39 @@
 </div>
 
 @code {
-    private PurchaseOrder newPurchaseOrder = new PurchaseOrder 
-    { 
-        SupplierId = 0,
-        ProductId = 0,
-        OrderedQuantity = 1,
-        UnitCost = 0.01m,
-        ExpectedDeliveryDate = DateTime.UtcNow.AddDays(7)
-    };
-    private List<Supplier> suppliers = new();
-    private List<Product> products = new();
+
+    private PurchaseOrder newPurchaseOrder = new PurchaseOrder
+        {
+            SupplierId = 0,
+            ProductId = 0,
+            OrderedQuantity = 1,
+
+            UnitCost = 0.01m,
+            ExpectedDeliveryDate = DateTime.UtcNow.AddDays(7)
+        };
+
+    // Renamed lists to reflect full vs. filtered data
+    private List<Supplier> allSuppliers = new();
+    private List<Product> allProducts = new();
+    private List<Product> displayedProducts = new(); 
+
     private Product? selectedProduct;
+
     private decimal totalCost = 0;
-    
-    // Temporary binding variables
+
+    // Temporary binding 
     private int? selectedSupplierId;
     private int? selectedProductId;
-    
+
     private string errorMessage = string.Empty;
     private string successMessage = string.Empty;
     private bool isSubmitting = false;
 
     [SupplyParameterFromQuery]
-    public int? ProductId { get; set; }
+    public int? ProductId
+    {
+        get; set;
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -191,16 +227,21 @@
     {
         try
         {
-            suppliers = await InventoryService.GetAllSuppliersAsync();
-            products = await InventoryService.GetAllProductsAsync(includeSuppliers: false);
+            //  Loads into 'all' lists for now
+            allSuppliers = await InventoryService.GetAllSuppliersAsync();
+            // Need SupplierId on products, should be present even if includeSuppliers is false.
+            allProducts = await InventoryService.GetAllProductsAsync(includeSuppliers: false);
 
-            Console.WriteLine($"[CreatePurchaseOrder] Loaded {suppliers.Count} suppliers and {products.Count} products");
+            // By default, display all products
+            displayedProducts = allProducts;
 
-            // If ProductId is provided in query string, pre-select it
+            Console.WriteLine($"[CreatePurchaseOrder] Loaded {allSuppliers.Count} suppliers and {allProducts.Count} products");
+            // If ProductId is in query string, pre-select it
             if (ProductId.HasValue && ProductId.Value > 0)
             {
                 newPurchaseOrder.ProductId = ProductId.Value;
                 selectedProductId = ProductId.Value;
+                //  auto-select the supplier and filter the list
                 OnProductChanged();
                 Console.WriteLine($"[CreatePurchaseOrder] Pre-selected product ID: {ProductId.Value}");
             }
@@ -212,12 +253,62 @@
         }
     }
 
+
+    // Handles filtering the product list when a supplier is selected - added
+    private void OnSupplierChanged()
+    {
+        Console.WriteLine($"[CreatePurchaseOrder] Supplier changed to: {newPurchaseOrder.SupplierId}");
+        if (newPurchaseOrder.SupplierId > 0)
+        {
+            // Filters products to this supplier
+            displayedProducts = allProducts.Where(p => p.SupplierId == newPurchaseOrder.SupplierId).ToList();
+        }
+        else
+        {
+            // If no supplier is selected, show all products
+            displayedProducts = allProducts;
+        }
+
+        // If the current selected product is not from this supplier, reset it
+        if (displayedProducts.All(p => p.Id != newPurchaseOrder.ProductId))
+        {
+            newPurchaseOrder.ProductId = 0;
+            selectedProduct = null;
+            Console.WriteLine("[CreatePurchaseOrder] Resetting selected product.");
+        }
+
+        CalculateTotalCost();
+        StateHasChanged();
+    }
+
+
+    // Auto-selects supplier when a product is chosen
     private void OnProductChanged()
     {
-        selectedProduct = products.FirstOrDefault(p => p.Id == newPurchaseOrder.ProductId);
-        
+        // Uses allProducts to find the selection
+        selectedProduct = allProducts.FirstOrDefault(p => p.Id == newPurchaseOrder.ProductId);
         Console.WriteLine($"[CreatePurchaseOrder] Product changed to: {newPurchaseOrder.ProductId}");
-        
+
+        // If product is selected and supplier is not the one in the dropdown, update the supplier dropdown
+        if (selectedProduct != null && selectedProduct.SupplierId.HasValue && newPurchaseOrder.SupplierId != selectedProduct.SupplierId.Value)
+        {
+            newPurchaseOrder.SupplierId = selectedProduct.SupplierId.Value;
+            Console.WriteLine($"[CreatePurchaseOrder] Auto-selecting supplier ID: {newPurchaseOrder.SupplierId}");
+
+            // supplier is now set, we re-filter the product list to that supplier
+            displayedProducts = allProducts.Where(p => p.SupplierId == newPurchaseOrder.SupplierId).ToList();
+        }
+        // If product is deselected (ID=0), reset product list
+        else if (newPurchaseOrder.ProductId == 0)
+        {
+            // If no supplier selected , show all.
+            if (newPurchaseOrder.SupplierId == 0)
+            {
+                displayedProducts = allProducts;
+            }
+        }
+
+
         // Auto-suggest quantity based on low stock
         if (selectedProduct != null && selectedProduct.CurrentStock < selectedProduct.MinLevel)
         {
@@ -225,7 +316,7 @@
             newPurchaseOrder.OrderedQuantity = Math.Max(suggestedQuantity, 1);
             Console.WriteLine($"[CreatePurchaseOrder] Auto-suggested quantity: {newPurchaseOrder.OrderedQuantity}");
         }
-        
+
         CalculateTotalCost();
         StateHasChanged();
     }
@@ -236,6 +327,7 @@
         newPurchaseOrder.TotalCost = totalCost;
     }
 
+    // Invalid data submission
     private void HandleInvalidSubmit()
     {
         Console.WriteLine("[CreatePurchaseOrder] Form validation FAILED!");
@@ -270,6 +362,7 @@
             {
                 errorMessage = "Please select a supplier.";
                 Console.WriteLine("[CreatePurchaseOrder] Validation failed: No supplier selected");
+                isSubmitting = false; // reseta submitting flag on validation failure
                 return;
             }
 
@@ -277,6 +370,17 @@
             {
                 errorMessage = "Please select a product.";
                 Console.WriteLine("[CreatePurchaseOrder] Validation failed: No product selected");
+                isSubmitting = false; // resets submitting flag
+                return;
+            }
+
+            // Verifies that the selected product actually belongs to the selected supplier
+            var productCheck = allProducts.FirstOrDefault(p => p.Id == newPurchaseOrder.ProductId);
+            if (productCheck == null || productCheck.SupplierId != newPurchaseOrder.SupplierId)
+            {
+                errorMessage = "Product and Supplier mismatch. Please re-select.";
+                Console.WriteLine("[CreatePurchaseOrder] Validation failed: Product/Supplier mismatch.");
+                isSubmitting = false;
                 return;
             }
 
@@ -284,6 +388,7 @@
             {
                 errorMessage = "Please enter a valid quantity.";
                 Console.WriteLine("[CreatePurchaseOrder] Validation failed: Invalid quantity");
+                isSubmitting = false; // resets submitting flag
                 return;
             }
 
@@ -291,10 +396,11 @@
             {
                 errorMessage = "Please enter a valid unit cost.";
                 Console.WriteLine("[CreatePurchaseOrder] Validation failed: Invalid unit cost");
+                isSubmitting = false; // resets submitting flag
                 return;
             }
 
-            // Get current manager info
+            // Gets current manager info
             Console.WriteLine("[CreatePurchaseOrder] Getting current user...");
             var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
             var user = authState.User;
@@ -312,6 +418,7 @@
                 {
                     errorMessage = "Unable to get current user information.";
                     Console.WriteLine("[CreatePurchaseOrder] Error: Current user is null");
+                    isSubmitting = false; // same as previous - resets submitting flag
                     return;
                 }
             }
@@ -319,20 +426,22 @@
             {
                 errorMessage = "You must be logged in to create a purchase order.";
                 Console.WriteLine("[CreatePurchaseOrder] Error: User not authenticated");
+                isSubmitting = false; // same as previous - resets submitting flag
                 return;
             }
 
-            // Create the purchase order
+            // Creates the purchase order
             Console.WriteLine("[CreatePurchaseOrder] Calling CreatePurchaseOrderAsync...");
             var poId = await InventoryService.CreatePurchaseOrderAsync(newPurchaseOrder);
 
             successMessage = $"Purchase Order #{poId} created successfully!";
             Console.WriteLine($"[CreatePurchaseOrder] Successfully created PO #{poId}");
-            
-            // Wait a moment to show success message, then redirect
+            // Waits  to show success message, then redirects
             await Task.Delay(1500);
+
+            // Redirects to the main purchase order list, not the dashboard
             Console.WriteLine("[CreatePurchaseOrder] Redirecting to purchase orders page...");
-            Navigation.NavigateTo("/manager/inventory/dashboard");
+            Navigation.NavigateTo("/manager/purchase-order"); // Go to the PurchaseOrder list
         }
         catch (Exception ex)
         {
@@ -353,6 +462,7 @@
 
     private void Cancel()
     {
-        Navigation.NavigateTo("/manager/inventory/dashboard");
+        // Redirects to the main purchase order list, not the dashboard
+        Navigation.NavigateTo("/manager/purchase-order");
     }
 }
