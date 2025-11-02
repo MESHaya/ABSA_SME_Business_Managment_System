@@ -15,7 +15,7 @@
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
         <h3 class="text-primary mb-2 mb-md-0">📦 Inventory Management Dashboard</h3>
         <div class="btn-group" role="group" aria-label="Inventory actions">
-            <a href="/manager/inventory/create-purchase-order" class="btn btn-success d-flex align-items-center shadow-sm">
+            <a href="/Manager/Inventory/CreatePurchaseOrder" class="btn btn-success d-flex align-items-center shadow-sm">
                 <i class="oi oi-cart me-2"></i>
                 <span>Create Purchase Order</span>
             </a>
@@ -296,7 +296,6 @@
             // Filter purchase orders by organization
             var allPurchaseOrders = await InventoryService.GetAllPurchaseOrdersAsync();
             recentPurchaseOrders = allPurchaseOrders
-                .Where(po => po.OrganizationId == OrganizationId)
                 .OrderByDescending(po => po.OrderDate)
                 .ToList();
 
